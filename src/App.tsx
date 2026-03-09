@@ -26,6 +26,7 @@ import GanttPage from "./pages/GanttPage";
 import LegalPage from "./pages/LegalPage";
 import PricingPage from "./pages/PricingPage";
 import NotFound from "./pages/NotFound";
+import { FeatureGatePage } from "./components/FeatureGatePage";
 
 const queryClient = new QueryClient();
 
@@ -55,14 +56,26 @@ const App = () => (
               <Route path="/clients" element={<ClientsPage />} />
               <Route path="/sprints" element={<SprintsPage />} />
               <Route path="/calendar" element={<CalendarPage />} />
-              <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/reports" element={
+                <FeatureGatePage feature="advancedReports" featureLabel="Advanced Reports">
+                  <ReportsPage />
+                </FeatureGatePage>
+              } />
               <Route path="/notes" element={<NotesPage />} />
               <Route path="/workload" element={<WorkloadPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/team" element={<TeamPage />} />
-              <Route path="/executive" element={<ExecutivePage />} />
+              <Route path="/executive" element={
+                <FeatureGatePage feature="executiveView" featureLabel="Executive Dashboard">
+                  <ExecutivePage />
+                </FeatureGatePage>
+              } />
               <Route path="/admin-dashboard" element={<AdminDashboardPage />} />
-              <Route path="/gantt" element={<GanttPage />} />
+              <Route path="/gantt" element={
+                <FeatureGatePage feature="ganttChart" featureLabel="Gantt Chart">
+                  <GanttPage />
+                </FeatureGatePage>
+              } />
             </Route>
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="*" element={<NotFound />} />
