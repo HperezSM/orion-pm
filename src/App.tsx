@@ -3,6 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/AppLayout";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -28,36 +30,44 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/legal" element={<LegalPage />} />
-          <Route element={<AppLayout />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/inbox" element={<InboxPage />} />
-            <Route path="/follow-ups" element={<FollowUpsPage />} />
-            <Route path="/projects" element={<ProjectsPage />} />
-            <Route path="/projects/:id" element={<ProjectDetailPage />} />
-            <Route path="/clients" element={<ClientsPage />} />
-            <Route path="/sprints" element={<SprintsPage />} />
-            <Route path="/calendar" element={<CalendarPage />} />
-            <Route path="/reports" element={<ReportsPage />} />
-            <Route path="/notes" element={<NotesPage />} />
-            <Route path="/workload" element={<WorkloadPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/team" element={<TeamPage />} />
-            <Route path="/executive" element={<ExecutivePage />} />
-            <Route path="/admin-dashboard" element={<AdminDashboardPage />} />
-            <Route path="/gantt" element={<GanttPage />} />
-          </Route>
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/legal" element={<LegalPage />} />
+            <Route
+              element={
+                <ProtectedRoute>
+                  <AppLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/inbox" element={<InboxPage />} />
+              <Route path="/follow-ups" element={<FollowUpsPage />} />
+              <Route path="/projects" element={<ProjectsPage />} />
+              <Route path="/projects/:id" element={<ProjectDetailPage />} />
+              <Route path="/clients" element={<ClientsPage />} />
+              <Route path="/sprints" element={<SprintsPage />} />
+              <Route path="/calendar" element={<CalendarPage />} />
+              <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/notes" element={<NotesPage />} />
+              <Route path="/workload" element={<WorkloadPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/team" element={<TeamPage />} />
+              <Route path="/executive" element={<ExecutivePage />} />
+              <Route path="/admin-dashboard" element={<AdminDashboardPage />} />
+              <Route path="/gantt" element={<GanttPage />} />
+            </Route>
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
