@@ -114,7 +114,7 @@ export default function SettingsPage() {
         workspace_id: workspace.id,
         event_type: "cancellation",
         old_tier: tier,
-        new_tier: "starter",
+        new_tier: "free",
         triggered_by: user?.id,
       });
 
