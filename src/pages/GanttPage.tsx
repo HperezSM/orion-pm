@@ -2,10 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { TopBar } from "@/components/TopBar";
 import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "@/components/StatusBadge";
+import { FeatureGate } from "@/components/FeatureGate";
 import { supabase } from "@/integrations/supabase/client";
 import { GanttChart, Loader2 } from "lucide-react";
 
-export default function GanttPage() {
+function GanttContent() {
   const { data: projects, isLoading } = useQuery({
     queryKey: ["gantt-projects"],
     queryFn: async () => {
