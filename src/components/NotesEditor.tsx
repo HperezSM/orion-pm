@@ -139,7 +139,7 @@ export function NotesEditor({ noteId, onSaved }: NotesEditorProps) {
 
   if (!editor) return null;
 
-  const aiDisabled = !canUseFeature("aiAnalysis") || hasReachedLimit("aiActions");
+  const aiDisabled = !canUseFeature("aiAnalysis");
 
   return (
     <div className="flex flex-col h-full">
