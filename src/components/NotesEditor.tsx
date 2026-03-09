@@ -100,13 +100,6 @@ export function NotesEditor({ noteId, onSaved }: NotesEditorProps) {
       return;
     }
 
-    // Check usage limit
-    if (hasReachedLimit("aiActions")) {
-      setUpgradeReason("limit");
-      setShowUpgrade(true);
-      return;
-    }
-
     const text = editor.getText();
     if (text.length < 20) {
       toast({ title: "Write more content first", description: "AI needs at least a few sentences to analyze." });
