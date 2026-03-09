@@ -21,14 +21,14 @@ import {
   DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 
-const TIER_LIMITS: Record<string, { seats: number; ai: number; storage: number; price: number }> = {
-  starter: { seats: 3, ai: 100, storage: 1, price: 0 },
-  pro: { seats: 10, ai: 1000, storage: 10, price: 49 },
-  business: { seats: 50, ai: 5000, storage: 50, price: 149 },
-  enterprise: { seats: 999, ai: 99999, storage: 500, price: 499 },
+const TIER_LIMITS: Record<string, { users: number; projects: number; threads: number; price: number }> = {
+  free: { users: 0, projects: 0, threads: 0, price: 0 },
+  starter: { users: 3, projects: 5, threads: 50, price: 19 },
+  pro: { users: 15, projects: 999, threads: 99999, price: 29 },
+  enterprise: { users: 999, projects: 999, threads: 99999, price: 49 },
 };
 
-const TIER_ORDER = ["starter", "pro", "business", "enterprise"];
+const TIER_ORDER = ["free", "starter", "pro", "enterprise"];
 
 export default function SettingsPage() {
   const { user, profile, roles, isOwner } = useAuth();
