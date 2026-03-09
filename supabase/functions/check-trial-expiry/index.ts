@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
     const { data: expiredWorkspaces, error: fetchError } = await supabase
       .from("workspaces")
       .select("id, owner_id, tier, trial_ends_at")
-      .not("tier", "eq", "starter")
+      .not("tier", "eq", "free")
       .not("trial_ends_at", "is", null)
       .lt("trial_ends_at", new Date().toISOString());
 
