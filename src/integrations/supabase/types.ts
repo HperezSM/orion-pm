@@ -1026,6 +1026,47 @@ export type Database = {
           },
         ]
       }
+      subscription_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          metadata_json: Json | null
+          new_tier: string | null
+          old_tier: string | null
+          triggered_by: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata_json?: Json | null
+          new_tier?: string | null
+          old_tier?: string | null
+          triggered_by?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata_json?: Json | null
+          new_tier?: string | null
+          old_tier?: string | null
+          triggered_by?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subtasks: {
         Row: {
           assignee_id: string | null
@@ -1145,6 +1186,95 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      workspace_usage: {
+        Row: {
+          ai_actions_count: number | null
+          billing_period_end: string
+          billing_period_start: string
+          id: string
+          overage_actions: number | null
+          overage_charged_usd: number | null
+          seats_active: number | null
+          storage_gb: number | null
+          workspace_id: string
+        }
+        Insert: {
+          ai_actions_count?: number | null
+          billing_period_end: string
+          billing_period_start: string
+          id?: string
+          overage_actions?: number | null
+          overage_charged_usd?: number | null
+          seats_active?: number | null
+          storage_gb?: number | null
+          workspace_id: string
+        }
+        Update: {
+          ai_actions_count?: number | null
+          billing_period_end?: string
+          billing_period_start?: string
+          id?: string
+          overage_actions?: number | null
+          overage_charged_usd?: number | null
+          seats_active?: number | null
+          storage_gb?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_usage_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspaces: {
+        Row: {
+          ai_actions_used: number | null
+          billing_cycle: string | null
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          seats_used: number | null
+          storage_used_gb: number | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          tier: string
+          trial_ends_at: string | null
+        }
+        Insert: {
+          ai_actions_used?: number | null
+          billing_cycle?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          owner_id: string
+          seats_used?: number | null
+          storage_used_gb?: number | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          tier?: string
+          trial_ends_at?: string | null
+        }
+        Update: {
+          ai_actions_used?: number | null
+          billing_cycle?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          seats_used?: number | null
+          storage_used_gb?: number | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          tier?: string
+          trial_ends_at?: string | null
         }
         Relationships: []
       }
