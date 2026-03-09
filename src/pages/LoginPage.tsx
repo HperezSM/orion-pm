@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { lovable } from "@/integrations/lovable/index";
 
 export default function LoginPage() {
   const navigate = useNavigate();
