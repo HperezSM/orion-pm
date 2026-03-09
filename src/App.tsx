@@ -24,6 +24,7 @@ import WorkloadPage from "./pages/WorkloadPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import GanttPage from "./pages/GanttPage";
 import LegalPage from "./pages/LegalPage";
+import PricingPage from "./pages/PricingPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/legal" element={<LegalPage />} />
+            <Route path="/pricing" element={<PricingPage />} />
             <Route
               element={
                 <ProtectedRoute>
