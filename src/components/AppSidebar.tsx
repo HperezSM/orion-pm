@@ -12,6 +12,8 @@ import {
   Settings,
   Users,
   ShieldCheck,
+  GanttChart,
+  BarChart,
 } from "lucide-react";
 
 const mainNav = [
@@ -24,12 +26,15 @@ const mainNav = [
   { to: "/calendar", icon: Calendar, label: "Calendar" },
   { to: "/reports", icon: BarChart3, label: "Reports" },
   { to: "/notes", icon: PenLine, label: "Notes" },
+  { to: "/workload", icon: BarChart, label: "Workload" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ];
 
 const adminNav = [
   { to: "/team", icon: Users, label: "Team Overview" },
   { to: "/executive", icon: ShieldCheck, label: "Executive View" },
+  { to: "/admin-dashboard", icon: LayoutDashboard, label: "Admin Dashboard" },
+  { to: "/gantt", icon: GanttChart, label: "Gantt (Global)" },
 ];
 
 export function AppSidebar() {

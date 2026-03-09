@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { TopBar } from "@/components/TopBar";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FolderKanban, Plus } from "lucide-react";
@@ -28,7 +29,7 @@ export default function ProjectsPage() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {projects.map((p, i) => (
-            <div key={i} className="bg-card border border-border rounded-lg p-4 hover:border-primary/30 transition-colors cursor-pointer group">
+            <Link to={`/projects/${i + 1}`} key={i} className="bg-card border border-border rounded-lg p-4 hover:border-primary/30 transition-colors cursor-pointer group block">
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <h3 className="text-sm font-heading font-semibold text-foreground group-hover:text-primary transition-colors">{p.name}</h3>
@@ -52,7 +53,7 @@ export default function ProjectsPage() {
                 <span>{p.tasks} tasks</span>
                 <span>PM: {p.pm}</span>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>

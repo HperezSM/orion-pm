@@ -1,5 +1,5 @@
 interface StatusBadgeProps {
-  status: "low" | "medium" | "high" | "on-track" | "at-risk" | "blocked" | "done" | "in-progress" | "todo" | "waiting";
+  status: "low" | "medium" | "high" | "critical" | "on-track" | "at-risk" | "blocked" | "done" | "in-progress" | "todo" | "waiting";
   label?: string;
 }
 
@@ -13,6 +13,7 @@ const styles: Record<string, string> = {
   todo: "bg-muted text-text-secondary",
   waiting: "bg-purple/15 text-purple",
   high: "bg-destructive/15 text-destructive",
+  critical: "bg-destructive/20 text-destructive font-bold",
   blocked: "bg-destructive/15 text-destructive",
 };
 
