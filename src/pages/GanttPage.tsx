@@ -129,3 +129,11 @@ function GanttContent() {
     </div>
   );
 }
+
+export default function GanttPage() {
+  return (
+    <FeatureGate feature="ganttChart" featureLabel="Gantt Chart">
+      <GanttContent />
+    </FeatureGate>
+  );
+}
