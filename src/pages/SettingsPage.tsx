@@ -120,7 +120,7 @@ export default function SettingsPage() {
 
       queryClient.invalidateQueries({ queryKey: ["workspace"] });
       setCancelOpen(false);
-      toast({ title: "Subscription cancelled", description: "Downgraded to Starter plan." });
+      toast({ title: "Subscription cancelled", description: "Downgraded to Free plan." });
     } catch (err: any) {
       toast({ title: "Failed", description: err.message, variant: "destructive" });
     }
