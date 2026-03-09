@@ -1,8 +1,48 @@
-import { Zap } from "lucide-react";
+import { useState } from "react";
+import { Zap, Mail, Lock, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { signInWithGoogle, signInWithEmail, signUpWithEmail, user, isLoading } = useAuth();
+  const { toast } = useToast();
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  // Redirect if already logged in
+  if (user && !isLoading) {
+    navigate("/dashboard", { replace: true });
+    return null;
+  }
+
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    if (isSignUp) {
+      const { error } = await signUpWithEmail(email, password, displayName);
+      if (error) {
+        toast({ title: "Sign up failed", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "Check your email", description: "We sent you a confirmation link." });
+      }
+    } else {
+      const { error } = await signInWithEmail(email, password);
+      if (error) {
+        toast({ title: "Sign in failed", description: error.message, variant: "destructive" });
+      } else {
+        navigate("/dashboard");
+      }
+    }
+    setLoading(false);
+  };
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center animate-fade-in">
@@ -17,7 +57,7 @@ export default function LoginPage() {
 
         <div className="bg-card border border-border rounded-lg p-6 space-y-4">
           <button
-            onClick={() => navigate("/dashboard")}
+            onClick={() => signInWithGoogle()}
             className="w-full flex items-center justify-center gap-3 px-4 py-2.5 bg-foreground text-background text-sm font-medium rounded-md hover:opacity-90 transition-opacity"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24">
@@ -28,6 +68,66 @@ export default function LoginPage() {
             </svg>
             Sign in with Google
           </button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-text-muted">or continue with email</span>
+            </div>
+          </div>
+
+          <form onSubmit={handleEmailAuth} className="space-y-3">
+            {isSignUp && (
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
+                <Input
+                  type="text"
+                  placeholder="Display name"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  className="pl-10"
+                  required={isSignUp}
+                />
+              </div>
+            )}
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
+              <Input
+                type="email"
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="pl-10"
+                required
+              />
+            </div>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
+              <Input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="pl-10"
+                required
+                minLength={6}
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Loading..." : isSignUp ? "Create account" : "Sign in"}
+            </Button>
+          </form>
+
+          <button
+            type="button"
+            onClick={() => setIsSignUp(!isSignUp)}
+            className="w-full text-sm text-primary hover:underline"
+          >
+            {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
+          </button>
+
           <p className="text-[11px] text-text-muted text-center">
             By signing in, you agree to our terms and privacy policy.
           </p>
