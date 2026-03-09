@@ -1,12 +1,14 @@
 import { Outlet } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { AppFooter } from "./AppFooter";
+import { TrialBanner } from "./TrialBanner";
 
 export function AppLayout() {
   return (
     <div className="min-h-screen flex">
       <AppSidebar />
       <div className="flex-1 ml-60 flex flex-col min-h-screen">
+        <TrialBanner />
         <div className="flex-1">
           <Outlet />
         </div>
