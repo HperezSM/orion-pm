@@ -1,5 +1,5 @@
 interface StatusBadgeProps {
-  status: "low" | "medium" | "high" | "on-track" | "at-risk" | "blocked" | "done" | "in-progress" | "todo" | "waiting";
+  status: "low" | "medium" | "high" | "critical" | "on-track" | "at-risk" | "blocked" | "done" | "in-progress" | "todo" | "waiting";
   label?: string;
 }
 
