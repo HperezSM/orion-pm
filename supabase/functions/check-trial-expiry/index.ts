@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
     const { data: expiredWorkspaces, error: fetchError } = await supabase
       .from("workspaces")
       .select("id, owner_id, tier, trial_ends_at")
-      .not("tier", "eq", "starter")
+      .not("tier", "eq", "free")
       .not("trial_ends_at", "is", null)
       .lt("trial_ends_at", new Date().toISOString());
 
@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
       const { error: updateError } = await supabase
         .from("workspaces")
         .update({ 
-          tier: "starter",
+          tier: "free",
           trial_ends_at: null 
         })
         .eq("id", workspace.id);
@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
         workspace_id: workspace.id,
         event_type: "trial_expired",
         old_tier: workspace.tier,
-        new_tier: "starter",
+        new_tier: "free",
         metadata_json: { reason: "trial_expired", expired_at: workspace.trial_ends_at },
       });
 

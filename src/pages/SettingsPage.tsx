@@ -21,14 +21,14 @@ import {
   DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 
-const TIER_LIMITS: Record<string, { seats: number; ai: number; storage: number; price: number }> = {
-  starter: { seats: 3, ai: 100, storage: 1, price: 0 },
-  pro: { seats: 10, ai: 1000, storage: 10, price: 49 },
-  business: { seats: 50, ai: 5000, storage: 50, price: 149 },
-  enterprise: { seats: 999, ai: 99999, storage: 500, price: 499 },
+const TIER_LIMITS: Record<string, { users: number; projects: number; threads: number; price: number }> = {
+  free: { users: 0, projects: 0, threads: 0, price: 0 },
+  starter: { users: 3, projects: 5, threads: 50, price: 19 },
+  pro: { users: 15, projects: 999, threads: 99999, price: 29 },
+  enterprise: { users: 999, projects: 999, threads: 99999, price: 49 },
 };
 
-const TIER_ORDER = ["starter", "pro", "business", "enterprise"];
+const TIER_ORDER = ["free", "starter", "pro", "enterprise"];
 
 export default function SettingsPage() {
   const { user, profile, roles, isOwner } = useAuth();
@@ -54,8 +54,8 @@ export default function SettingsPage() {
     },
   });
 
-  const tier = workspace?.tier ?? "pro";
-  const limits = TIER_LIMITS[tier] ?? TIER_LIMITS.pro;
+  const tier = workspace?.tier ?? "free";
+  const limits = TIER_LIMITS[tier] ?? TIER_LIMITS.free;
 
   const handleProfileSave = async () => {
     if (!user) return;
@@ -106,7 +106,7 @@ export default function SettingsPage() {
     try {
       const { error } = await supabase
         .from("workspaces")
-        .update({ tier: "starter" })
+        .update({ tier: "free" })
         .eq("id", workspace.id);
       if (error) throw error;
 
@@ -114,13 +114,13 @@ export default function SettingsPage() {
         workspace_id: workspace.id,
         event_type: "cancellation",
         old_tier: tier,
-        new_tier: "starter",
+        new_tier: "free",
         triggered_by: user?.id,
       });
 
       queryClient.invalidateQueries({ queryKey: ["workspace"] });
       setCancelOpen(false);
-      toast({ title: "Subscription cancelled", description: "Downgraded to Starter plan." });
+      toast({ title: "Subscription cancelled", description: "Downgraded to Free plan." });
     } catch (err: any) {
       toast({ title: "Failed", description: err.message, variant: "destructive" });
     }
@@ -195,7 +195,7 @@ export default function SettingsPage() {
                     <div>
                       <h3 className="text-sm font-heading font-semibold text-foreground capitalize">{tier} Plan</h3>
                       <p className="text-xs text-text-muted">
-                        {workspace?.billing_cycle === "yearly" ? "Billed annually" : "Billed monthly"} · ${limits.price}/mo
+                        {workspace?.billing_cycle === "yearly" ? "Billed annually" : "Billed monthly"} · ${limits.price}/user/mo
                       </p>
                     </div>
                   </div>
@@ -208,24 +208,24 @@ export default function SettingsPage() {
                 <div className="space-y-4">
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs text-text-secondary flex items-center gap-1.5"><Users className="h-3 w-3" /> Seats</span>
-                      <span className="text-xs font-mono text-text-muted">{workspace?.seats_used ?? 1}/{limits.seats}</span>
+                      <span className="text-xs text-text-secondary flex items-center gap-1.5"><Users className="h-3 w-3" /> Users</span>
+                      <span className="text-xs font-mono text-text-muted">{workspace?.seats_used ?? 0}/{limits.users === 999 ? "∞" : limits.users}</span>
                     </div>
-                    <Progress value={usagePct(workspace?.seats_used ?? 1, limits.seats)} className="h-2" />
+                    <Progress value={limits.users === 999 ? 5 : usagePct(workspace?.seats_used ?? 0, limits.users)} className="h-2" />
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs text-text-secondary flex items-center gap-1.5"><Zap className="h-3 w-3" /> AI Actions</span>
-                      <span className="text-xs font-mono text-text-muted">{workspace?.ai_actions_used ?? 0}/{limits.ai}</span>
+                      <span className="text-xs text-text-secondary flex items-center gap-1.5"><Zap className="h-3 w-3" /> Active Projects</span>
+                      <span className="text-xs font-mono text-text-muted">{limits.projects === 999 ? "Unlimited" : `${limits.projects} max`}</span>
                     </div>
-                    <Progress value={usagePct(workspace?.ai_actions_used ?? 0, limits.ai)} className="h-2" />
+                    <Progress value={limits.projects === 999 ? 5 : 20} className="h-2" />
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs text-text-secondary flex items-center gap-1.5"><HardDrive className="h-3 w-3" /> Storage</span>
-                      <span className="text-xs font-mono text-text-muted">{Number(workspace?.storage_used_gb ?? 0).toFixed(1)}/{limits.storage} GB</span>
+                      <span className="text-xs text-text-secondary flex items-center gap-1.5"><HardDrive className="h-3 w-3" /> Gmail Threads/mo</span>
+                      <span className="text-xs font-mono text-text-muted">{limits.threads === 99999 ? "Unlimited" : `${limits.threads} max`}</span>
                     </div>
-                    <Progress value={usagePct(Number(workspace?.storage_used_gb ?? 0), limits.storage)} className="h-2" />
+                    <Progress value={limits.threads === 99999 ? 5 : 10} className="h-2" />
                   </div>
                 </div>
               </Card>
@@ -252,9 +252,9 @@ export default function SettingsPage() {
                           <p className="text-2xl font-heading font-bold text-foreground mt-1">${l.price}</p>
                           <p className="text-[10px] text-text-muted">/month</p>
                           <div className="text-[11px] text-text-muted mt-2 space-y-0.5">
-                            <p>{l.seats} seats</p>
-                            <p>{l.ai.toLocaleString()} AI actions</p>
-                            <p>{l.storage} GB</p>
+                            <p>{l.users === 999 ? "Unlimited" : l.users} users</p>
+                            <p>{l.projects === 999 ? "Unlimited" : l.projects} projects</p>
+                            <p>{l.threads === 99999 ? "Unlimited" : l.threads} threads/mo</p>
                           </div>
                           {isCurrent ? (
                             <p className="mt-3 text-xs text-primary font-medium">Current</p>
@@ -280,12 +280,12 @@ export default function SettingsPage() {
               )}
 
               {/* Cancel */}
-              {isOwner && tier !== "starter" && (
+              {isOwner && tier !== "free" && (
                 <Card className="p-6 border-destructive/30">
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-sm font-heading font-semibold text-destructive">Cancel Subscription</h3>
-                      <p className="text-xs text-text-muted mt-1">Downgrade to Starter (free). You'll lose access to premium features.</p>
+                      <p className="text-xs text-text-muted mt-1">Downgrade to Free (view-only). You'll lose access to all features.</p>
                     </div>
                     <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
                       <DialogTrigger asChild>

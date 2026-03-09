@@ -50,14 +50,14 @@ export function FeatureGate({ feature, featureLabel, children, fallback }: Featu
         open={showUpgrade}
         onOpenChange={setShowUpgrade}
         feature={featureLabel}
-        requiredTier={requiredTier ?? "pro"}
+        requiredTier={requiredTier ?? "starter"}
       />
     </>
   );
 }
 
 interface LimitGateProps {
-  resource: "seats" | "aiActions" | "storage";
+  resource: "users" | "projects";
   children: ReactNode;
   onLimitReached?: () => void;
 }
@@ -88,7 +88,7 @@ export function LimitGate({ resource, children, onLimitReached }: LimitGateProps
         open={showUpgrade}
         onOpenChange={setShowUpgrade}
         limitType={resource}
-        requiredTier={tier === "starter" ? "pro" : tier === "pro" ? "business" : "enterprise"}
+        requiredTier={tier === "free" ? "starter" : tier === "starter" ? "pro" : "enterprise"}
       />
     </>
   );

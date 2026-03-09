@@ -21,7 +21,7 @@ interface NotesEditorProps {
 export function NotesEditor({ noteId, onSaved }: NotesEditorProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { canUseFeature, hasReachedLimit, getRequiredTierForFeature, tier } = useTierEnforcement();
+  const { canUseFeature, getRequiredTierForFeature, tier } = useTierEnforcement();
   const [saving, setSaving] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [suggestions, setSuggestions] = useState<any[] | null>(null);
@@ -100,13 +100,6 @@ export function NotesEditor({ noteId, onSaved }: NotesEditorProps) {
       return;
     }
 
-    // Check usage limit
-    if (hasReachedLimit("aiActions")) {
-      setUpgradeReason("limit");
-      setShowUpgrade(true);
-      return;
-    }
-
     const text = editor.getText();
     if (text.length < 20) {
       toast({ title: "Write more content first", description: "AI needs at least a few sentences to analyze." });
@@ -146,7 +139,7 @@ export function NotesEditor({ noteId, onSaved }: NotesEditorProps) {
 
   if (!editor) return null;
 
-  const aiDisabled = !canUseFeature("aiAnalysis") || hasReachedLimit("aiActions");
+  const aiDisabled = !canUseFeature("aiAnalysis");
 
   return (
     <div className="flex flex-col h-full">
@@ -218,8 +211,7 @@ export function NotesEditor({ noteId, onSaved }: NotesEditorProps) {
         open={showUpgrade}
         onOpenChange={setShowUpgrade}
         feature={upgradeReason === "feature" ? "AI Analysis" : undefined}
-        limitType={upgradeReason === "limit" ? "aiActions" : undefined}
-        requiredTier={upgradeReason === "feature" ? (getRequiredTierForFeature("aiAnalysis") ?? "pro") : (tier === "starter" ? "pro" : "business")}
+        requiredTier={upgradeReason === "feature" ? (getRequiredTierForFeature("aiAnalysis") ?? "pro") : (tier === "free" ? "starter" : tier === "starter" ? "pro" : "enterprise")}
       />
     </div>
   );

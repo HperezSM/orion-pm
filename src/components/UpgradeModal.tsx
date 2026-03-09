@@ -4,7 +4,7 @@ import {
   DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Crown, ArrowUpRight, Zap, Users, HardDrive, CheckCircle2 } from "lucide-react";
+import { Crown, ArrowUpRight, CheckCircle2 } from "lucide-react";
 import { TierName } from "@/hooks/useTierEnforcement";
 
 interface UpgradeModalProps {
@@ -12,40 +12,65 @@ interface UpgradeModalProps {
   onOpenChange: (open: boolean) => void;
   feature?: string;
   requiredTier?: TierName;
-  limitType?: "seats" | "aiActions" | "storage";
+  limitType?: "users" | "projects";
 }
 
 const TIER_PRICES: Record<TierName, number> = {
-  starter: 0,
-  pro: 49,
-  business: 149,
-  enterprise: 499,
+  free: 0,
+  starter: 19,
+  pro: 29,
+  enterprise: 49,
 };
 
 const TIER_FEATURES: Record<TierName, string[]> = {
-  starter: ["3 seats", "100 AI actions/mo", "1 GB storage"],
-  pro: ["10 seats", "1,000 AI actions/mo", "10 GB storage", "Gantt charts", "Advanced reports", "AI analysis"],
-  business: ["50 seats", "5,000 AI actions/mo", "50 GB storage", "Executive view", "Custom integrations"],
-  enterprise: ["Unlimited seats", "Unlimited AI actions", "500 GB storage", "API access", "Priority support"],
+  free: ["View-only access"],
+  starter: [
+    "Up to 3 users",
+    "5 active projects",
+    "50 Gmail threads/month",
+    "Basic follow-up automation",
+    "Kanban + task management",
+    "Weekly reports (email)",
+    "Notes module",
+  ],
+  pro: [
+    "Up to 15 users",
+    "Unlimited projects",
+    "Unlimited Gmail parsing",
+    "Full follow-up automation",
+    "Sprint ceremonies",
+    "Gantt + timeline with PDF export",
+    "All reports + PDF export",
+    "Notes with AI analysis",
+    "Workload manager",
+    "Calendar integration",
+  ],
+  enterprise: [
+    "Unlimited users",
+    "Everything in Pro",
+    "Executive view (C-level reports)",
+    "Approval workflows",
+    "White-label option",
+    "Priority support",
+    "Audit logs + compliance export",
+  ],
 };
 
 export function UpgradeModal({
   open,
   onOpenChange,
   feature,
-  requiredTier = "pro",
+  requiredTier = "starter",
   limitType,
 }: UpgradeModalProps) {
   const navigate = useNavigate();
 
   const getLimitMessage = () => {
     switch (limitType) {
-      case "seats":
+      case "users":
         return "You've reached the maximum number of team members for your plan.";
-      case "aiActions":
-        return "You've used all your AI actions for this billing period.";
-      case "storage":
-        return "You've reached your storage limit.";
+      case "projects":
+        return "You've reached the maximum number of active projects for your plan.";
       default:
         return null;
     }
@@ -83,7 +108,10 @@ export function UpgradeModal({
         <div className="border border-primary/30 bg-primary/5 rounded-lg p-4 mt-2">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-heading font-semibold text-foreground capitalize">{requiredTier} Plan</span>
-            <span className="text-lg font-heading font-bold text-foreground">${TIER_PRICES[requiredTier]}<span className="text-xs text-text-muted font-normal">/mo</span></span>
+            <span className="text-lg font-heading font-bold text-foreground">
+              ${TIER_PRICES[requiredTier]}
+              <span className="text-xs text-text-muted font-normal">/user/mo</span>
+            </span>
           </div>
           <div className="space-y-1.5">
             {TIER_FEATURES[requiredTier].map((f, i) => (
