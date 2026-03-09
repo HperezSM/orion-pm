@@ -53,7 +53,7 @@ export default function ProjectsPage() {
                 <span>{p.tasks} tasks</span>
                 <span>PM: {p.pm}</span>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>

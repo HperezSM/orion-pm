@@ -13,6 +13,7 @@ const styles: Record<string, string> = {
   todo: "bg-muted text-text-secondary",
   waiting: "bg-purple/15 text-purple",
   high: "bg-destructive/15 text-destructive",
+  critical: "bg-destructive/20 text-destructive font-bold",
   blocked: "bg-destructive/15 text-destructive",
 };
 
