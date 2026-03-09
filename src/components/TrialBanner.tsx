@@ -9,7 +9,7 @@ export function TrialBanner() {
   const { usage, isTrialActive, tier } = useTierEnforcement();
   const [dismissed, setDismissed] = useState(false);
 
-  if (!isTrialActive || dismissed || tier === "starter") {
+  if (!isTrialActive || dismissed || tier === "free") {
     return null;
   }
 
@@ -33,7 +33,7 @@ export function TrialBanner() {
             {daysLeft === 0 ? "Trial ends today!" : daysLeft === 1 ? "1 day left" : `${daysLeft} days left`}
           </span>
           <span className="text-text-secondary ml-1.5">
-            in your Pro trial. Upgrade to keep all features.
+            in your {tier} trial. Upgrade to keep all features.
           </span>
         </p>
       </div>

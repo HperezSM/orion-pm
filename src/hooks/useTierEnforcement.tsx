@@ -1,71 +1,116 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export type TierName = "starter" | "pro" | "business" | "enterprise";
+export type TierName = "free" | "starter" | "pro" | "enterprise";
 
 export interface TierLimits {
-  seats: number;
-  aiActions: number;
-  storageGb: number;
+  users: number;
+  projects: number;
+  threadsPerMonth: number;
+  pricePerUser: number;
   features: {
     ganttChart: boolean;
     executiveView: boolean;
     advancedReports: boolean;
     aiAnalysis: boolean;
+    sprintCeremonies: boolean;
+    workloadManager: boolean;
+    calendarIntegration: boolean;
+    approvalWorkflows: boolean;
+    auditLogs: boolean;
+    whiteLabel: boolean;
+    pdfExport: boolean;
+    followUpAutomation: boolean;
     customIntegrations: boolean;
     apiAccess: boolean;
   };
 }
 
 const TIER_CONFIG: Record<TierName, TierLimits> = {
-  starter: {
-    seats: 3,
-    aiActions: 100,
-    storageGb: 1,
+  free: {
+    users: 0,
+    projects: 0,
+    threadsPerMonth: 0,
+    pricePerUser: 0,
     features: {
       ganttChart: false,
       executiveView: false,
       advancedReports: false,
       aiAnalysis: false,
+      sprintCeremonies: false,
+      workloadManager: false,
+      calendarIntegration: false,
+      approvalWorkflows: false,
+      auditLogs: false,
+      whiteLabel: false,
+      pdfExport: false,
+      followUpAutomation: false,
+      customIntegrations: false,
+      apiAccess: false,
+    },
+  },
+  starter: {
+    users: 3,
+    projects: 5,
+    threadsPerMonth: 50,
+    pricePerUser: 19,
+    features: {
+      ganttChart: false,
+      executiveView: false,
+      advancedReports: false,
+      aiAnalysis: false,
+      sprintCeremonies: false,
+      workloadManager: false,
+      calendarIntegration: false,
+      approvalWorkflows: false,
+      auditLogs: false,
+      whiteLabel: false,
+      pdfExport: false,
+      followUpAutomation: true,
       customIntegrations: false,
       apiAccess: false,
     },
   },
   pro: {
-    seats: 10,
-    aiActions: 1000,
-    storageGb: 10,
+    users: 15,
+    projects: 999,
+    threadsPerMonth: 99999,
+    pricePerUser: 29,
     features: {
       ganttChart: true,
       executiveView: false,
       advancedReports: true,
       aiAnalysis: true,
+      sprintCeremonies: true,
+      workloadManager: true,
+      calendarIntegration: true,
+      approvalWorkflows: false,
+      auditLogs: false,
+      whiteLabel: false,
+      pdfExport: true,
+      followUpAutomation: true,
       customIntegrations: false,
       apiAccess: false,
     },
   },
-  business: {
-    seats: 50,
-    aiActions: 5000,
-    storageGb: 50,
-    features: {
-      ganttChart: true,
-      executiveView: true,
-      advancedReports: true,
-      aiAnalysis: true,
-      customIntegrations: true,
-      apiAccess: false,
-    },
-  },
   enterprise: {
-    seats: 999,
-    aiActions: 99999,
-    storageGb: 500,
+    users: 999,
+    projects: 999,
+    threadsPerMonth: 99999,
+    pricePerUser: 49,
     features: {
       ganttChart: true,
       executiveView: true,
       advancedReports: true,
       aiAnalysis: true,
+      sprintCeremonies: true,
+      workloadManager: true,
+      calendarIntegration: true,
+      approvalWorkflows: true,
+      auditLogs: true,
+      whiteLabel: true,
+      pdfExport: true,
+      followUpAutomation: true,
       customIntegrations: true,
       apiAccess: true,
     },
@@ -91,15 +136,15 @@ export function useTierEnforcement() {
         .maybeSingle();
       return data;
     },
-    staleTime: 60000, // Cache for 1 minute
+    staleTime: 60000,
   });
 
-  const tier: TierName = (workspace?.tier as TierName) ?? "pro";
+  const tier: TierName = (workspace?.tier as TierName) ?? "free";
   const limits = TIER_CONFIG[tier];
 
   const usage: WorkspaceUsage = {
     tier,
-    seatsUsed: workspace?.seats_used ?? 1,
+    seatsUsed: workspace?.seats_used ?? 0,
     aiActionsUsed: workspace?.ai_actions_used ?? 0,
     storageUsedGb: Number(workspace?.storage_used_gb ?? 0),
     trialEndsAt: workspace?.trial_ends_at ?? null,
@@ -111,34 +156,19 @@ export function useTierEnforcement() {
     return limits.features[feature];
   };
 
-  const hasReachedLimit = (resource: "seats" | "aiActions" | "storage"): boolean => {
+  const hasReachedLimit = (resource: "users" | "projects"): boolean => {
     switch (resource) {
-      case "seats":
-        return usage.seatsUsed >= limits.seats;
-      case "aiActions":
-        return usage.aiActionsUsed >= limits.aiActions;
-      case "storage":
-        return usage.storageUsedGb >= limits.storageGb;
+      case "users":
+        return usage.seatsUsed >= limits.users;
+      case "projects":
+        return false; // TODO: count projects
       default:
         return false;
     }
   };
 
-  const getUsagePercent = (resource: "seats" | "aiActions" | "storage"): number => {
-    switch (resource) {
-      case "seats":
-        return Math.min(100, Math.round((usage.seatsUsed / limits.seats) * 100));
-      case "aiActions":
-        return Math.min(100, Math.round((usage.aiActionsUsed / limits.aiActions) * 100));
-      case "storage":
-        return Math.min(100, Math.round((usage.storageUsedGb / limits.storageGb) * 100));
-      default:
-        return 0;
-    }
-  };
-
   const getRequiredTierForFeature = (feature: keyof TierLimits["features"]): TierName | null => {
-    const tierOrder: TierName[] = ["starter", "pro", "business", "enterprise"];
+    const tierOrder: TierName[] = ["free", "starter", "pro", "enterprise"];
     for (const t of tierOrder) {
       if (TIER_CONFIG[t].features[feature]) {
         return t;
@@ -155,7 +185,6 @@ export function useTierEnforcement() {
     isTrialActive,
     canUseFeature,
     hasReachedLimit,
-    getUsagePercent,
     getRequiredTierForFeature,
     tierConfig: TIER_CONFIG,
   };
