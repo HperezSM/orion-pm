@@ -86,3 +86,11 @@ function ExecutiveContent() {
     </div>
   );
 }
+
+export default function ExecutivePage() {
+  return (
+    <FeatureGate feature="executiveView" featureLabel="Executive View">
+      <ExecutiveContent />
+    </FeatureGate>
+  );
+}
