@@ -4,7 +4,7 @@ interface StatCardProps {
   label: string;
   value: string | number;
   icon: ReactNode;
-  accent?: "primary" | "success" | "warning" | "destructive" | "purple";
+  accent?: "primary" | "success" | "warning" | "destructive" | "purple" | "teal";
 }
 
 const accentMap = {
