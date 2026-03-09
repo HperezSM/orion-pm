@@ -211,8 +211,7 @@ export function NotesEditor({ noteId, onSaved }: NotesEditorProps) {
         open={showUpgrade}
         onOpenChange={setShowUpgrade}
         feature={upgradeReason === "feature" ? "AI Analysis" : undefined}
-        limitType={upgradeReason === "limit" ? "aiActions" : undefined}
-        requiredTier={upgradeReason === "feature" ? (getRequiredTierForFeature("aiAnalysis") ?? "pro") : (tier === "starter" ? "pro" : "business")}
+        requiredTier={upgradeReason === "feature" ? (getRequiredTierForFeature("aiAnalysis") ?? "pro") : (tier === "free" ? "starter" : tier === "starter" ? "pro" : "enterprise")}
       />
     </div>
   );
