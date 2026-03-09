@@ -9,6 +9,7 @@ import DashboardPage from "./pages/DashboardPage";
 import InboxPage from "./pages/InboxPage";
 import FollowUpsPage from "./pages/FollowUpsPage";
 import ProjectsPage from "./pages/ProjectsPage";
+import ProjectDetailPage from "./pages/ProjectDetailPage";
 import ClientsPage from "./pages/ClientsPage";
 import SprintsPage from "./pages/SprintsPage";
 import CalendarPage from "./pages/CalendarPage";
@@ -17,6 +18,9 @@ import NotesPage from "./pages/NotesPage";
 import SettingsPage from "./pages/SettingsPage";
 import TeamPage from "./pages/TeamPage";
 import ExecutivePage from "./pages/ExecutivePage";
+import WorkloadPage from "./pages/WorkloadPage";
+import AdminDashboardPage from "./pages/AdminDashboardPage";
+import GanttPage from "./pages/GanttPage";
 import LegalPage from "./pages/LegalPage";
 import NotFound from "./pages/NotFound";
 
@@ -36,14 +40,18 @@ const App = () => (
             <Route path="/inbox" element={<InboxPage />} />
             <Route path="/follow-ups" element={<FollowUpsPage />} />
             <Route path="/projects" element={<ProjectsPage />} />
+            <Route path="/projects/:id" element={<ProjectDetailPage />} />
             <Route path="/clients" element={<ClientsPage />} />
             <Route path="/sprints" element={<SprintsPage />} />
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/notes" element={<NotesPage />} />
+            <Route path="/workload" element={<WorkloadPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/team" element={<TeamPage />} />
             <Route path="/executive" element={<ExecutivePage />} />
+            <Route path="/admin-dashboard" element={<AdminDashboardPage />} />
+            <Route path="/gantt" element={<GanttPage />} />
           </Route>
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="*" element={<NotFound />} />

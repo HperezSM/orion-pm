@@ -13,6 +13,7 @@ const accentMap = {
   warning: "text-warning bg-warning/10",
   destructive: "text-destructive bg-destructive/10",
   purple: "text-purple bg-purple/10",
+  teal: "text-teal bg-teal/10",
 };
 
 export function StatCard({ label, value, icon, accent = "primary" }: StatCardProps) {
