@@ -106,7 +106,7 @@ export default function SettingsPage() {
     try {
       const { error } = await supabase
         .from("workspaces")
-        .update({ tier: "starter" })
+        .update({ tier: "free" })
         .eq("id", workspace.id);
       if (error) throw error;
 
