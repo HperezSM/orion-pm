@@ -2,10 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { TopBar } from "@/components/TopBar";
 import { StatCard } from "@/components/StatCard";
 import { EmptyState } from "@/components/EmptyState";
+import { FeatureGate } from "@/components/FeatureGate";
 import { supabase } from "@/integrations/supabase/client";
 import { ShieldCheck, Users, AlertTriangle, TrendingUp, FolderKanban, Loader2 } from "lucide-react";
 
-export default function ExecutivePage() {
+function ExecutiveContent() {
   const { data: stats, isLoading } = useQuery({
     queryKey: ["executive-stats"],
     queryFn: async () => {
