@@ -76,22 +76,26 @@ export function AppSidebar() {
       {/* Main nav */}
       <nav className="flex-1 overflow-y-auto py-3 px-3">
         <div className="space-y-0.5">
-          {mainNav.map(({ to, icon: Icon, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors duration-150 ${
-                  isActive
-                    ? "bg-background-secondary text-foreground font-medium"
-                    : "text-text-secondary hover:text-foreground hover:bg-background-secondary"
-                }`
-              }
-            >
-              <Icon className="h-4 w-4 flex-shrink-0" />
-              <span>{label}</span>
-            </NavLink>
-          ))}
+          {mainNav.map(({ to, icon: Icon, label, feature }) => {
+            const locked = feature ? !canUseFeature(feature) : false;
+            return (
+              <NavLink
+                key={to}
+                to={to}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors duration-150 ${
+                    isActive
+                      ? "bg-background-secondary text-foreground font-medium"
+                      : "text-text-secondary hover:text-foreground hover:bg-background-secondary"
+                  }`
+                }
+              >
+                <Icon className="h-4 w-4 flex-shrink-0" />
+                <span className="flex-1">{label}</span>
+                {locked && <Lock className="h-3 w-3 text-text-muted flex-shrink-0" />}
+              </NavLink>
+            );
+          })}
         </div>
 
         {/* Admin section */}
