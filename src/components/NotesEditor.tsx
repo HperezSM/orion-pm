@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useTierEnforcement } from "@/hooks/useTierEnforcement";
+import { UpgradeModal } from "@/components/UpgradeModal";
 import {
   Bold, Italic, Heading1, Heading2, List, ListOrdered,
   Sparkles, Save, Loader2,
@@ -19,10 +21,13 @@ interface NotesEditorProps {
 export function NotesEditor({ noteId, onSaved }: NotesEditorProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { canUseFeature, hasReachedLimit, getRequiredTierForFeature, tier } = useTierEnforcement();
   const [saving, setSaving] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [suggestions, setSuggestions] = useState<any[] | null>(null);
   const [title, setTitle] = useState("Untitled");
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const [upgradeReason, setUpgradeReason] = useState<"feature" | "limit">("feature");
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentIdRef = useRef<string | null>(noteId);
 
@@ -87,17 +92,45 @@ export function NotesEditor({ noteId, onSaved }: NotesEditorProps) {
 
   const analyzeNote = async () => {
     if (!editor) return;
+
+    // Check feature access
+    if (!canUseFeature("aiAnalysis")) {
+      setUpgradeReason("feature");
+      setShowUpgrade(true);
+      return;
+    }
+
+    // Check usage limit
+    if (hasReachedLimit("aiActions")) {
+      setUpgradeReason("limit");
+      setShowUpgrade(true);
+      return;
+    }
+
     const text = editor.getText();
     if (text.length < 20) {
       toast({ title: "Write more content first", description: "AI needs at least a few sentences to analyze." });
       return;
     }
+
     setAnalyzing(true);
     try {
       const { data, error } = await supabase.functions.invoke("analyze-note", { body: { content: text } });
       if (error) throw error;
       setSuggestions(data?.suggestions ?? []);
       toast({ title: "Analysis complete", description: `Found ${data?.suggestions?.length ?? 0} actionable items.` });
+
+      // Increment AI actions used (fire and forget)
+      supabase
+        .from("workspaces")
+        .select("id, ai_actions_used")
+        .limit(1)
+        .maybeSingle()
+        .then(({ data: ws }) => {
+          if (ws) {
+            supabase.from("workspaces").update({ ai_actions_used: (ws.ai_actions_used ?? 0) + 1 }).eq("id", ws.id).then(() => {});
+          }
+        });
     } catch (e: any) {
       if (e?.message?.includes("429") || e?.status === 429) {
         toast({ title: "Rate limited", description: "Please try again in a moment.", variant: "destructive" });
@@ -112,6 +145,8 @@ export function NotesEditor({ noteId, onSaved }: NotesEditorProps) {
   };
 
   if (!editor) return null;
+
+  const aiDisabled = !canUseFeature("aiAnalysis") || hasReachedLimit("aiActions");
 
   return (
     <div className="flex flex-col h-full">
@@ -142,7 +177,12 @@ export function NotesEditor({ noteId, onSaved }: NotesEditorProps) {
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
           Save
         </Button>
-        <Button size="sm" className="h-8 gap-1.5 text-xs" onClick={analyzeNote} disabled={analyzing}>
+        <Button
+          size="sm"
+          className={`h-8 gap-1.5 text-xs ${aiDisabled ? "opacity-60" : ""}`}
+          onClick={analyzeNote}
+          disabled={analyzing}
+        >
           {analyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
           AI Analyze
         </Button>
@@ -172,6 +212,15 @@ export function NotesEditor({ noteId, onSaved }: NotesEditorProps) {
           </div>
         </div>
       )}
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        open={showUpgrade}
+        onOpenChange={setShowUpgrade}
+        feature={upgradeReason === "feature" ? "AI Analysis" : undefined}
+        limitType={upgradeReason === "limit" ? "aiActions" : undefined}
+        requiredTier={upgradeReason === "feature" ? (getRequiredTierForFeature("aiAnalysis") ?? "pro") : (tier === "starter" ? "pro" : "business")}
+      />
     </div>
   );
 }
