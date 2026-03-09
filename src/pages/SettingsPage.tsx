@@ -285,7 +285,7 @@ export default function SettingsPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-sm font-heading font-semibold text-destructive">Cancel Subscription</h3>
-                      <p className="text-xs text-text-muted mt-1">Downgrade to Starter (free). You'll lose access to premium features.</p>
+                      <p className="text-xs text-text-muted mt-1">Downgrade to Free (view-only). You'll lose access to all features.</p>
                     </div>
                     <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
                       <DialogTrigger asChild>
