@@ -252,9 +252,9 @@ export default function SettingsPage() {
                           <p className="text-2xl font-heading font-bold text-foreground mt-1">${l.price}</p>
                           <p className="text-[10px] text-text-muted">/month</p>
                           <div className="text-[11px] text-text-muted mt-2 space-y-0.5">
-                            <p>{l.seats} seats</p>
-                            <p>{l.ai.toLocaleString()} AI actions</p>
-                            <p>{l.storage} GB</p>
+                            <p>{l.users === 999 ? "Unlimited" : l.users} users</p>
+                            <p>{l.projects === 999 ? "Unlimited" : l.projects} projects</p>
+                            <p>{l.threads === 99999 ? "Unlimited" : l.threads} threads/mo</p>
                           </div>
                           {isCurrent ? (
                             <p className="mt-3 text-xs text-primary font-medium">Current</p>
