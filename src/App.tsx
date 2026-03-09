@@ -24,6 +24,7 @@ import WorkloadPage from "./pages/WorkloadPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import GanttPage from "./pages/GanttPage";
 import LegalPage from "./pages/LegalPage";
+import PricingPage from "./pages/PricingPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
