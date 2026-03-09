@@ -51,6 +51,7 @@ const adminNav: NavItem[] = [
 
 export function AppSidebar() {
   const { profile, isAdmin, signOut } = useAuth();
+  const { canUseFeature } = useTierEnforcement();
   const navigate = useNavigate();
   const { toast } = useToast();
 
