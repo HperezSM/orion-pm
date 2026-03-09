@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { lovable } from "@/integrations/lovable/index";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -73,7 +74,12 @@ export default function LoginPage() {
         <div className="bg-card border border-border rounded-lg p-6 space-y-4">
           {/* Google OAuth */}
           <button
-            onClick={() => signInWithGoogle()}
+            onClick={async () => {
+              const { error } = await lovable.auth.signInWithOAuth("google", {
+                redirect_uri: window.location.origin,
+              });
+              if (error) toast({ title: "Google sign-in failed", description: String(error), variant: "destructive" });
+            }}
             className="w-full flex items-center justify-center gap-3 px-4 py-2.5 bg-foreground text-background text-sm font-medium rounded-md hover:opacity-90 transition-opacity"
           >
             <svg className="h-4 w-4 flex-shrink-0" viewBox="0 0 24 24">

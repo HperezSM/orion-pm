@@ -3,7 +3,7 @@ import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
-type AppRole = Database["public"]["Enums"]["app_role"];
+type AppRole = Database["public"]["Enums"]["app_role"] | "owner";
 
 interface Profile {
   id: string;
@@ -23,6 +23,11 @@ interface AuthContextType {
   isLoading: boolean;
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  isOwner: boolean;
+  impersonatingRole: AppRole | null;
+  setImpersonatingRole: (role: AppRole | null) => void;
+  effectiveIsAdmin: boolean;
+  effectiveIsOwner: boolean;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUpWithEmail: (email: string, password: string, displayName: string) => Promise<{ error: Error | null }>;
@@ -37,9 +42,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [impersonatingRole, setImpersonatingRole] = useState<AppRole | null>(null);
 
   const fetchUserData = async (userId: string) => {
-    // Fetch profile
     const { data: profileData } = await supabase
       .from("profiles")
       .select("*")
@@ -48,34 +53,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     setProfile(profileData);
 
-    // Fetch roles
     const { data: rolesData } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", userId);
     
-    setRoles(rolesData?.map(r => r.role) ?? []);
+    setRoles(rolesData?.map(r => r.role as AppRole) ?? []);
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Use setTimeout to avoid deadlock with Supabase auth
           setTimeout(() => fetchUserData(session.user.id), 0);
         } else {
           setProfile(null);
           setRoles([]);
+          setImpersonatingRole(null);
         }
         setIsLoading(false);
       }
     );
 
-    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -115,11 +117,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    setImpersonatingRole(null);
     await supabase.auth.signOut();
   };
 
-  const isAdmin = roles.includes("admin") || roles.includes("super_admin");
-  const isSuperAdmin = roles.includes("super_admin");
+  const isOwner = roles.includes("owner" as AppRole);
+  const isAdmin = isOwner || roles.includes("admin") || roles.includes("super_admin");
+  const isSuperAdmin = isOwner || roles.includes("super_admin");
+
+  // When impersonating, restrict effective permissions
+  const effectiveIsOwner = impersonatingRole ? false : isOwner;
+  const effectiveIsAdmin = impersonatingRole
+    ? ["owner", "super_admin", "admin"].includes(impersonatingRole)
+    : isAdmin;
 
   return (
     <AuthContext.Provider
@@ -129,8 +139,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profile,
         roles,
         isLoading,
-        isAdmin,
-        isSuperAdmin,
+        isAdmin: effectiveIsAdmin,
+        isSuperAdmin: impersonatingRole ? impersonatingRole === "super_admin" || impersonatingRole === "owner" : isSuperAdmin,
+        isOwner: effectiveIsOwner,
+        impersonatingRole,
+        setImpersonatingRole,
+        effectiveIsAdmin,
+        effectiveIsOwner,
         signInWithGoogle,
         signInWithEmail,
         signUpWithEmail,
