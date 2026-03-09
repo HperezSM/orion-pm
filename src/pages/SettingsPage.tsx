@@ -208,24 +208,24 @@ export default function SettingsPage() {
                 <div className="space-y-4">
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs text-text-secondary flex items-center gap-1.5"><Users className="h-3 w-3" /> Seats</span>
-                      <span className="text-xs font-mono text-text-muted">{workspace?.seats_used ?? 1}/{limits.seats}</span>
+                      <span className="text-xs text-text-secondary flex items-center gap-1.5"><Users className="h-3 w-3" /> Users</span>
+                      <span className="text-xs font-mono text-text-muted">{workspace?.seats_used ?? 0}/{limits.users === 999 ? "∞" : limits.users}</span>
                     </div>
-                    <Progress value={usagePct(workspace?.seats_used ?? 1, limits.seats)} className="h-2" />
+                    <Progress value={limits.users === 999 ? 5 : usagePct(workspace?.seats_used ?? 0, limits.users)} className="h-2" />
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs text-text-secondary flex items-center gap-1.5"><Zap className="h-3 w-3" /> AI Actions</span>
-                      <span className="text-xs font-mono text-text-muted">{workspace?.ai_actions_used ?? 0}/{limits.ai}</span>
+                      <span className="text-xs text-text-secondary flex items-center gap-1.5"><Zap className="h-3 w-3" /> Active Projects</span>
+                      <span className="text-xs font-mono text-text-muted">{limits.projects === 999 ? "Unlimited" : `${limits.projects} max`}</span>
                     </div>
-                    <Progress value={usagePct(workspace?.ai_actions_used ?? 0, limits.ai)} className="h-2" />
+                    <Progress value={limits.projects === 999 ? 5 : 20} className="h-2" />
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs text-text-secondary flex items-center gap-1.5"><HardDrive className="h-3 w-3" /> Storage</span>
-                      <span className="text-xs font-mono text-text-muted">{Number(workspace?.storage_used_gb ?? 0).toFixed(1)}/{limits.storage} GB</span>
+                      <span className="text-xs text-text-secondary flex items-center gap-1.5"><HardDrive className="h-3 w-3" /> Gmail Threads/mo</span>
+                      <span className="text-xs font-mono text-text-muted">{limits.threads === 99999 ? "Unlimited" : `${limits.threads} max`}</span>
                     </div>
-                    <Progress value={usagePct(Number(workspace?.storage_used_gb ?? 0), limits.storage)} className="h-2" />
+                    <Progress value={limits.threads === 99999 ? 5 : 10} className="h-2" />
                   </div>
                 </div>
               </Card>
