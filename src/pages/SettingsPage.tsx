@@ -280,7 +280,7 @@ export default function SettingsPage() {
               )}
 
               {/* Cancel */}
-              {isOwner && tier !== "starter" && (
+              {isOwner && tier !== "free" && (
                 <Card className="p-6 border-destructive/30">
                   <div className="flex items-center justify-between">
                     <div>
