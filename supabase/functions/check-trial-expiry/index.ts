@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
       const { error: updateError } = await supabase
         .from("workspaces")
         .update({ 
-          tier: "starter",
+          tier: "free",
           trial_ends_at: null 
         })
         .eq("id", workspace.id);
