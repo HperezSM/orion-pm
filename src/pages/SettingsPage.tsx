@@ -54,8 +54,8 @@ export default function SettingsPage() {
     },
   });
 
-  const tier = workspace?.tier ?? "pro";
-  const limits = TIER_LIMITS[tier] ?? TIER_LIMITS.pro;
+  const tier = workspace?.tier ?? "free";
+  const limits = TIER_LIMITS[tier] ?? TIER_LIMITS.free;
 
   const handleProfileSave = async () => {
     if (!user) return;
