@@ -195,7 +195,7 @@ export default function SettingsPage() {
                     <div>
                       <h3 className="text-sm font-heading font-semibold text-foreground capitalize">{tier} Plan</h3>
                       <p className="text-xs text-text-muted">
-                        {workspace?.billing_cycle === "yearly" ? "Billed annually" : "Billed monthly"} · ${limits.price}/mo
+                        {workspace?.billing_cycle === "yearly" ? "Billed annually" : "Billed monthly"} · ${limits.price}/user/mo
                       </p>
                     </div>
                   </div>
