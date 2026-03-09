@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
         workspace_id: workspace.id,
         event_type: "trial_expired",
         old_tier: workspace.tier,
-        new_tier: "starter",
+        new_tier: "free",
         metadata_json: { reason: "trial_expired", expired_at: workspace.trial_ends_at },
       });
 
