@@ -21,7 +21,7 @@ interface NotesEditorProps {
 export function NotesEditor({ noteId, onSaved }: NotesEditorProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { canUseFeature, hasReachedLimit, getRequiredTierForFeature, tier } = useTierEnforcement();
+  const { canUseFeature, getRequiredTierForFeature, tier } = useTierEnforcement();
   const [saving, setSaving] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [suggestions, setSuggestions] = useState<any[] | null>(null);
