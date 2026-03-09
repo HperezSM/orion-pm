@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTierEnforcement, TierLimits } from "@/hooks/useTierEnforcement";
 import {
   LayoutDashboard,
   Mail,
@@ -16,10 +17,18 @@ import {
   GanttChart,
   BarChart,
   LogOut,
+  Lock,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const mainNav = [
+interface NavItem {
+  to: string;
+  icon: any;
+  label: string;
+  feature?: keyof TierLimits["features"];
+}
+
+const mainNav: NavItem[] = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/inbox", icon: Mail, label: "Inbox" },
   { to: "/follow-ups", icon: Clock, label: "Follow-Ups" },
@@ -27,17 +36,17 @@ const mainNav = [
   { to: "/clients", icon: Building2, label: "Clients" },
   { to: "/sprints", icon: Zap, label: "Sprints" },
   { to: "/calendar", icon: Calendar, label: "Calendar" },
-  { to: "/reports", icon: BarChart3, label: "Reports" },
+  { to: "/reports", icon: BarChart3, label: "Reports", feature: "advancedReports" },
   { to: "/notes", icon: PenLine, label: "Notes" },
   { to: "/workload", icon: BarChart, label: "Workload" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ];
 
-const adminNav = [
+const adminNav: NavItem[] = [
   { to: "/team", icon: Users, label: "Team Overview" },
-  { to: "/executive", icon: ShieldCheck, label: "Executive View" },
+  { to: "/executive", icon: ShieldCheck, label: "Executive View", feature: "executiveView" },
   { to: "/admin-dashboard", icon: LayoutDashboard, label: "Admin Dashboard" },
-  { to: "/gantt", icon: GanttChart, label: "Gantt (Global)" },
+  { to: "/gantt", icon: GanttChart, label: "Gantt (Global)", feature: "ganttChart" },
 ];
 
 export function AppSidebar() {
