@@ -1,38 +1,80 @@
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { TopBar } from "@/components/TopBar";
+import { EmptyState } from "@/components/EmptyState";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Zap, CheckCircle2, MessageSquare, Target, Plus, Send } from "lucide-react";
+import { Zap, CheckCircle2, MessageSquare, Target, Plus, Send, Loader2 } from "lucide-react";
 
 export default function SprintsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [standupData, setStandupData] = useState({ yesterday: "", today: "", blockers: "" });
   const [retroData, setRetroData] = useState({ content: "", category: "went-well" });
   const [submitting, setSubmitting] = useState(false);
 
-  // Mock sprint data - replace with real query
-  const activeSprint = {
-    id: "mock-sprint-id",
-    name: "Sprint 14",
-    project_id: "mock-project-id",
-    start_date: "2026-03-03",
-    end_date: "2026-03-17",
-    goal: "Complete dashboard MVP",
-    capacity_points: 24,
-    velocity_actual: 14,
-  };
+  const { data: activeSprint, isLoading } = useQuery({
+    queryKey: ["active-sprint"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("sprints")
+        .select("*")
+        .eq("status", "active")
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  const { data: standups } = useQuery({
+    queryKey: ["standups", activeSprint?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("standup_entries")
+        .select("*, profile:profiles!standup_entries_user_id_fkey(display_name)")
+        .eq("sprint_id", activeSprint!.id)
+        .eq("date", new Date().toISOString().split("T")[0])
+        .order("submitted_at", { ascending: false });
+      return data ?? [];
+    },
+    enabled: !!activeSprint,
+  });
+
+  const { data: retroItems } = useQuery({
+    queryKey: ["retro-items", activeSprint?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("retro_items")
+        .select("*, profile:profiles!retro_items_user_id_fkey(display_name)")
+        .eq("sprint_id", activeSprint!.id)
+        .order("created_at", { ascending: false });
+      return data ?? [];
+    },
+    enabled: !!activeSprint,
+  });
+
+  const { data: sprintTasks } = useQuery({
+    queryKey: ["sprint-tasks", activeSprint?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("tasks")
+        .select("id, title, status, story_points, priority")
+        .eq("sprint_id", activeSprint!.id);
+      return data ?? [];
+    },
+    enabled: !!activeSprint,
+  });
 
   const handleStandupSubmit = async () => {
-    if (!user || !standupData.yesterday || !standupData.today) {
+    if (!user || !activeSprint || !standupData.yesterday || !standupData.today) {
       toast({ title: "Missing fields", description: "Please fill in yesterday and today.", variant: "destructive" });
       return;
     }
@@ -46,18 +88,19 @@ export default function SprintsPage() {
         blockers: standupData.blockers || null,
       });
       if (error) throw error;
-      toast({ title: "Standup submitted", description: "Your daily update has been recorded." });
+      queryClient.invalidateQueries({ queryKey: ["standups"] });
+      toast({ title: "Standup submitted" });
       setStandupData({ yesterday: "", today: "", blockers: "" });
     } catch (err: any) {
-      toast({ title: "Failed to submit", description: err.message, variant: "destructive" });
+      toast({ title: "Failed", description: err.message, variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleRetroSubmit = async () => {
-    if (!user || !retroData.content) {
-      toast({ title: "Missing content", description: "Please enter your feedback.", variant: "destructive" });
+    if (!user || !activeSprint || !retroData.content) {
+      toast({ title: "Missing content", variant: "destructive" });
       return;
     }
     setSubmitting(true);
@@ -70,166 +113,135 @@ export default function SprintsPage() {
         anonymous: false,
       });
       if (error) throw error;
-      toast({ title: "Feedback added", description: "Your retrospective item has been submitted." });
+      queryClient.invalidateQueries({ queryKey: ["retro-items"] });
+      toast({ title: "Feedback added" });
       setRetroData({ content: "", category: "went-well" });
     } catch (err: any) {
-      toast({ title: "Failed to submit", description: err.message, variant: "destructive" });
+      toast({ title: "Failed", description: err.message, variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="animate-fade-in">
+        <TopBar title="Sprint Ceremonies" subtitle="Loading..." />
+        <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+      </div>
+    );
+  }
+
+  if (!activeSprint) {
+    return (
+      <div className="animate-fade-in">
+        <TopBar title="Sprint Ceremonies" subtitle="No active sprint" />
+        <div className="p-6">
+          <EmptyState
+            icon={<Zap className="h-6 w-6" />}
+            title="No active sprint"
+            description="Create a sprint from a project's sprint board to get started with ceremonies, standups, and retrospectives."
+          />
+        </div>
+      </div>
+    );
+  }
+
+  const completedSP = sprintTasks?.filter(t => t.status === "done").reduce((sum, t) => sum + (t.story_points ?? 0), 0) ?? 0;
+  const committedSP = sprintTasks?.reduce((sum, t) => sum + (t.story_points ?? 0), 0) ?? 0;
+  const doneCount = sprintTasks?.filter(t => t.status === "done").length ?? 0;
+  const carryOver = sprintTasks?.filter(t => t.status !== "done").length ?? 0;
+
   return (
     <div className="animate-fade-in">
-      <TopBar title="Sprint Ceremonies" subtitle={`${activeSprint.name} · ${activeSprint.start_date} → ${activeSprint.end_date}`} />
+      <TopBar title="Sprint Ceremonies" subtitle={`${activeSprint.name} · ${activeSprint.start_date ?? "?"} → ${activeSprint.end_date ?? "?"}`} />
       <div className="p-6">
         <Tabs defaultValue="standup" className="space-y-4">
           <TabsList className="bg-background-secondary border border-border">
-            <TabsTrigger value="standup" className="text-xs gap-1.5">
-              <Zap className="h-3 w-3" /> Daily Standup
-            </TabsTrigger>
-            <TabsTrigger value="review" className="text-xs gap-1.5">
-              <CheckCircle2 className="h-3 w-3" /> Sprint Review
-            </TabsTrigger>
-            <TabsTrigger value="retro" className="text-xs gap-1.5">
-              <MessageSquare className="h-3 w-3" /> Retrospective
-            </TabsTrigger>
-            <TabsTrigger value="planning" className="text-xs gap-1.5">
-              <Target className="h-3 w-3" /> Planning
-            </TabsTrigger>
+            <TabsTrigger value="standup" className="text-xs gap-1.5"><Zap className="h-3 w-3" /> Daily Standup</TabsTrigger>
+            <TabsTrigger value="review" className="text-xs gap-1.5"><CheckCircle2 className="h-3 w-3" /> Sprint Review</TabsTrigger>
+            <TabsTrigger value="retro" className="text-xs gap-1.5"><MessageSquare className="h-3 w-3" /> Retrospective</TabsTrigger>
+            <TabsTrigger value="planning" className="text-xs gap-1.5"><Target className="h-3 w-3" /> Planning</TabsTrigger>
           </TabsList>
 
-          {/* Daily Standup */}
           <TabsContent value="standup">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Card className="p-4">
                 <h3 className="text-sm font-heading font-semibold text-foreground mb-3">Submit Daily Update</h3>
                 <div className="space-y-3">
                   <div>
-                    <Label htmlFor="yesterday" className="text-xs text-text-muted">What did you accomplish yesterday?</Label>
-                    <Textarea
-                      id="yesterday"
-                      value={standupData.yesterday}
-                      onChange={(e) => setStandupData({ ...standupData, yesterday: e.target.value })}
-                      placeholder="e.g., Completed API integration, reviewed 3 PRs..."
-                      className="mt-1 text-sm"
-                      rows={3}
-                    />
+                    <Label className="text-xs text-text-muted">What did you accomplish yesterday?</Label>
+                    <Textarea value={standupData.yesterday} onChange={(e) => setStandupData({ ...standupData, yesterday: e.target.value })} className="mt-1 text-sm" rows={3} />
                   </div>
                   <div>
-                    <Label htmlFor="today" className="text-xs text-text-muted">What are you working on today?</Label>
-                    <Textarea
-                      id="today"
-                      value={standupData.today}
-                      onChange={(e) => setStandupData({ ...standupData, today: e.target.value })}
-                      placeholder="e.g., Build dashboard components, unit tests..."
-                      className="mt-1 text-sm"
-                      rows={3}
-                    />
+                    <Label className="text-xs text-text-muted">What are you working on today?</Label>
+                    <Textarea value={standupData.today} onChange={(e) => setStandupData({ ...standupData, today: e.target.value })} className="mt-1 text-sm" rows={3} />
                   </div>
                   <div>
-                    <Label htmlFor="blockers" className="text-xs text-text-muted">Any blockers? (optional)</Label>
-                    <Textarea
-                      id="blockers"
-                      value={standupData.blockers}
-                      onChange={(e) => setStandupData({ ...standupData, blockers: e.target.value })}
-                      placeholder="e.g., Waiting on design assets, API rate limit..."
-                      className="mt-1 text-sm"
-                      rows={2}
-                    />
+                    <Label className="text-xs text-text-muted">Any blockers? (optional)</Label>
+                    <Textarea value={standupData.blockers} onChange={(e) => setStandupData({ ...standupData, blockers: e.target.value })} className="mt-1 text-sm" rows={2} />
                   </div>
                   <Button onClick={handleStandupSubmit} disabled={submitting} className="w-full">
                     <Send className="h-3 w-3 mr-2" /> {submitting ? "Submitting..." : "Submit Standup"}
                   </Button>
                 </div>
               </Card>
-
               <Card className="p-4">
                 <h3 className="text-sm font-heading font-semibold text-foreground mb-3">Team Standups (Today)</h3>
-                <p className="text-xs text-text-muted mb-4">Recent async updates from the team</p>
-                <div className="space-y-3">
-                  <div className="border-l-2 border-primary pl-3 py-2">
-                    <p className="text-xs font-medium text-foreground">You</p>
-                    <p className="text-xs text-text-muted mt-1">📋 Today: Build dashboard components</p>
-                    <p className="text-xs text-text-muted">✅ Yesterday: Completed API integration</p>
+                {standups && standups.length > 0 ? (
+                  <div className="space-y-3">
+                    {standups.map((s: any) => (
+                      <div key={s.id} className="border-l-2 border-primary pl-3 py-2">
+                        <p className="text-xs font-medium text-foreground">{s.profile?.display_name ?? "Team member"}</p>
+                        <p className="text-xs text-text-muted mt-1">📋 Today: {s.doing_today}</p>
+                        <p className="text-xs text-text-muted">✅ Yesterday: {s.done_yesterday}</p>
+                        {s.blockers && <p className="text-xs text-destructive">🚫 Blocker: {s.blockers}</p>}
+                      </div>
+                    ))}
                   </div>
-                  <div className="border-l-2 border-border pl-3 py-2">
-                    <p className="text-xs font-medium text-foreground">David L.</p>
-                    <p className="text-xs text-text-muted mt-1">📋 Today: Database optimization</p>
-                    <p className="text-xs text-text-muted">✅ Yesterday: Fixed performance issues</p>
-                  </div>
-                </div>
+                ) : (
+                  <p className="text-xs text-text-muted py-4 text-center">No standups submitted today</p>
+                )}
               </Card>
             </div>
           </TabsContent>
 
-          {/* Sprint Review */}
           <TabsContent value="review">
             <Card className="p-4">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-sm font-heading font-semibold text-foreground">Sprint Review</h3>
-                  <p className="text-xs text-text-muted">Demonstrate completed work and gather stakeholder feedback</p>
-                </div>
-                <Button variant="outline" size="sm">
-                  <Plus className="h-3 w-3 mr-1" /> Add Demo Item
-                </Button>
-              </div>
-
+              <h3 className="text-sm font-heading font-semibold text-foreground mb-4">Sprint Review</h3>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                 <div className="text-center p-3 bg-background-secondary rounded-lg">
-                  <p className="text-lg font-heading font-bold text-foreground">{activeSprint.capacity_points}</p>
+                  <p className="text-lg font-heading font-bold text-foreground">{committedSP}</p>
                   <p className="text-[11px] text-text-muted">Committed SP</p>
                 </div>
                 <div className="text-center p-3 bg-background-secondary rounded-lg">
-                  <p className="text-lg font-heading font-bold text-success">{activeSprint.velocity_actual}</p>
+                  <p className="text-lg font-heading font-bold text-success">{completedSP}</p>
                   <p className="text-[11px] text-text-muted">Completed SP</p>
                 </div>
                 <div className="text-center p-3 bg-background-secondary rounded-lg">
-                  <p className="text-lg font-heading font-bold text-foreground">10</p>
+                  <p className="text-lg font-heading font-bold text-foreground">{doneCount}</p>
                   <p className="text-[11px] text-text-muted">Tasks Done</p>
                 </div>
                 <div className="text-center p-3 bg-background-secondary rounded-lg">
-                  <p className="text-lg font-heading font-bold text-warning">4</p>
+                  <p className="text-lg font-heading font-bold text-warning">{carryOver}</p>
                   <p className="text-[11px] text-text-muted">Carry Over</p>
                 </div>
               </div>
-
-              <div className="space-y-2">
-                <div className="border border-border rounded-lg p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-foreground font-medium">Dashboard MVP - Core Features</p>
-                      <p className="text-xs text-text-muted">8 SP · Demo: Mar 17, 2:00 PM</p>
-                    </div>
-                    <CheckCircle2 className="h-4 w-4 text-success" />
-                  </div>
-                </div>
-                <div className="border border-border rounded-lg p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-foreground font-medium">API Authentication Layer</p>
-                      <p className="text-xs text-text-muted">5 SP · Demo: Mar 17, 2:15 PM</p>
-                    </div>
-                    <CheckCircle2 className="h-4 w-4 text-success" />
-                  </div>
-                </div>
-              </div>
+              {sprintTasks?.filter(t => t.status === "done").length === 0 && (
+                <p className="text-xs text-text-muted text-center py-4">No completed tasks to review yet</p>
+              )}
             </Card>
           </TabsContent>
 
-          {/* Retrospective */}
           <TabsContent value="retro">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Card className="p-4">
                 <h3 className="text-sm font-heading font-semibold text-foreground mb-3">Add Feedback</h3>
                 <div className="space-y-3">
                   <div>
-                    <Label htmlFor="category" className="text-xs text-text-muted">Category</Label>
+                    <Label className="text-xs text-text-muted">Category</Label>
                     <Select value={retroData.category} onValueChange={(val) => setRetroData({ ...retroData, category: val })}>
-                      <SelectTrigger id="category" className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
+                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="went-well">✅ Went Well</SelectItem>
                         <SelectItem value="to-improve">🔄 To Improve</SelectItem>
@@ -238,94 +250,58 @@ export default function SprintsPage() {
                     </Select>
                   </div>
                   <div>
-                    <Label htmlFor="content" className="text-xs text-text-muted">Your Feedback</Label>
-                    <Textarea
-                      id="content"
-                      value={retroData.content}
-                      onChange={(e) => setRetroData({ ...retroData, content: e.target.value })}
-                      placeholder="Share your thoughts on the sprint..."
-                      className="mt-1 text-sm"
-                      rows={4}
-                    />
+                    <Label className="text-xs text-text-muted">Your Feedback</Label>
+                    <Textarea value={retroData.content} onChange={(e) => setRetroData({ ...retroData, content: e.target.value })} className="mt-1 text-sm" rows={4} />
                   </div>
                   <Button onClick={handleRetroSubmit} disabled={submitting} className="w-full">
                     <Plus className="h-3 w-3 mr-2" /> {submitting ? "Adding..." : "Add Feedback"}
                   </Button>
                 </div>
               </Card>
-
               <Card className="p-4">
                 <h3 className="text-sm font-heading font-semibold text-foreground mb-3">Team Feedback</h3>
-                <div className="space-y-3">
-                  <div className="border-l-2 border-success pl-3 py-2">
-                    <p className="text-xs text-success font-medium">✅ Went Well</p>
-                    <p className="text-xs text-foreground mt-1">Great collaboration on the dashboard feature</p>
-                    <p className="text-xs text-text-muted">— Ana R.</p>
+                {retroItems && retroItems.length > 0 ? (
+                  <div className="space-y-3">
+                    {retroItems.map((item: any) => {
+                      const borderColor = item.category === "went-well" ? "border-success" : item.category === "to-improve" ? "border-warning" : "border-primary";
+                      const label = item.category === "went-well" ? "✅ Went Well" : item.category === "to-improve" ? "🔄 To Improve" : "⚡ Action Item";
+                      return (
+                        <div key={item.id} className={`border-l-2 ${borderColor} pl-3 py-2`}>
+                          <p className="text-xs font-medium text-text-muted">{label}</p>
+                          <p className="text-xs text-foreground mt-1">{item.content}</p>
+                          <p className="text-xs text-text-muted">— {item.profile?.display_name ?? "Anonymous"}</p>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <div className="border-l-2 border-warning pl-3 py-2">
-                    <p className="text-xs text-warning font-medium">🔄 To Improve</p>
-                    <p className="text-xs text-foreground mt-1">Daily standups need better attendance</p>
-                    <p className="text-xs text-text-muted">— Marco T.</p>
-                  </div>
-                  <div className="border-l-2 border-primary pl-3 py-2">
-                    <p className="text-xs text-primary font-medium">⚡ Action Item</p>
-                    <p className="text-xs text-foreground mt-1">Schedule async standup time slots</p>
-                    <p className="text-xs text-text-muted">— David L.</p>
-                  </div>
-                </div>
+                ) : (
+                  <p className="text-xs text-text-muted py-4 text-center">No feedback submitted yet</p>
+                )}
               </Card>
             </div>
           </TabsContent>
 
-          {/* Sprint Planning */}
           <TabsContent value="planning">
             <Card className="p-4">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-sm font-heading font-semibold text-foreground">Sprint Planning</h3>
-                  <p className="text-xs text-text-muted">Commit tasks and set team capacity for the upcoming sprint</p>
-                </div>
-                <Button variant="outline" size="sm">
-                  <Plus className="h-3 w-3 mr-1" /> Add Task to Sprint
-                </Button>
-              </div>
-
+              <h3 className="text-sm font-heading font-semibold text-foreground mb-2">Sprint Planning</h3>
+              <p className="text-xs text-text-muted mb-4">Commit tasks and set team capacity for the upcoming sprint</p>
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
                 <div className="text-center p-3 bg-background-secondary rounded-lg">
-                  <p className="text-lg font-heading font-bold text-foreground">24</p>
+                  <p className="text-lg font-heading font-bold text-foreground">{activeSprint.capacity_points ?? 0}</p>
                   <p className="text-[11px] text-text-muted">Team Capacity (SP)</p>
                 </div>
                 <div className="text-center p-3 bg-background-secondary rounded-lg">
-                  <p className="text-lg font-heading font-bold text-primary">18</p>
+                  <p className="text-lg font-heading font-bold text-primary">{committedSP}</p>
                   <p className="text-[11px] text-text-muted">Committed (SP)</p>
                 </div>
                 <div className="text-center p-3 bg-background-secondary rounded-lg">
-                  <p className="text-lg font-heading font-bold text-success">6</p>
+                  <p className="text-lg font-heading font-bold text-success">{Math.max(0, (activeSprint.capacity_points ?? 0) - committedSP)}</p>
                   <p className="text-[11px] text-text-muted">Available (SP)</p>
                 </div>
               </div>
-
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-text-muted mb-2">Backlog (Ready for Sprint)</p>
-                <div className="border border-border rounded-lg p-3 hover:border-primary/30 transition-colors cursor-pointer">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-foreground font-medium">Setup CI/CD pipeline</p>
-                      <p className="text-xs text-text-muted">Priority: Medium · 3 SP</p>
-                    </div>
-                    <Button variant="outline" size="sm">Add to Sprint</Button>
-                  </div>
-                </div>
-                <div className="border border-border rounded-lg p-3 hover:border-primary/30 transition-colors cursor-pointer">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-foreground font-medium">Design email templates</p>
-                      <p className="text-xs text-text-muted">Priority: Low · 2 SP</p>
-                    </div>
-                    <Button variant="outline" size="sm">Add to Sprint</Button>
-                  </div>
-                </div>
-              </div>
+              {sprintTasks?.length === 0 && (
+                <p className="text-xs text-text-muted text-center py-4">No tasks assigned to this sprint yet. Add tasks from the project board.</p>
+              )}
             </Card>
           </TabsContent>
         </Tabs>
