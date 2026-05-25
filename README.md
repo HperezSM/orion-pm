@@ -1,73 +1,51 @@
-# Welcome to your Lovable project
+# Orion PM — AI-Powered PM Command Center
 
-## Project info
+> Your AI co-pilot for project management. Daily briefs, sprint tracking, and automated reporting — built for modern PMs.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+![Status](https://img.shields.io/badge/Status-In%20Development-yellow)
+![Stack](https://img.shields.io/badge/Stack-TypeScript-blue)
+![AI](https://img.shields.io/badge/AI-Claude%20%2B%20n8n-D97757)
 
-## How can I edit this code?
+## What It Is
 
-There are several ways of editing your application.
+Orion PM is an AI-powered command center designed for Senior PMs and Scrum Masters managing multiple teams or complex delivery environments. It replaces fragmented morning routines — checking Jira, Slack, email, and dashboards separately — with a single AI-generated brief and action surface.
 
-**Use Lovable**
+## The Problem
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+Senior PMs lose 60-90 minutes daily to information gathering before they can make a single prioritization decision. Orion eliminates that overhead.
 
-Changes made via Lovable will be committed automatically to this repo.
+## Core Features
 
-**Use your preferred IDE**
+| Feature | Description | Status |
+|---|---|---|
+| **Daily AI Brief** | Auto-generated morning summary of sprint health, blockers, and priorities | 🟡 In Dev |
+| **Sprint Tracker** | Real-time velocity, burndown, and risk flags across multiple teams | 🟡 In Dev |
+| **Automated Reporting** | Stakeholder-ready reports generated from live project data | 🔲 Planned |
+| **Retrospective Assistant** | AI-facilitated retro prompts and action item capture | 🔲 Planned |
+| **Risk Radar** | Early warning system for scope creep, dependency blocks, and team capacity | 🔲 Planned |
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Tech Stack
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- **Frontend:** TypeScript / React
+- **AI Layer:** Claude API (Anthropic)
+- **Automation:** n8n workflows
+- **Built with:** Lovable
 
-Follow these steps:
+## Design Philosophy
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+Built by a PM, for PMs. Every feature comes from a real pain point experienced across 9+ years managing cross-functional teams in Healthcare, Fintech, and SaaS.
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+Agile-native: designed to complement Scrum, Nexus, and Kanban workflows — not replace them.
 
-# Step 3: Install the necessary dependencies.
-npm i
+## Roadmap
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+- [ ] Public beta launch
+- [ ] Jira / Linear integration
+- [ ] Slack digest connector
+- [ ] Multi-team Nexus dashboard
+- [ ] Mobile-first view
 
-**Edit a file directly in GitHub**
+## Author
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+**Herber Giovanni Perez** — Senior Technical PM based in Guatemala City 🇬🇹
+[LinkedIn](https://linkedin.com/in/herber-perez) · [GitHub](https://github.com/HperezSM)
