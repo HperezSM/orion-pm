@@ -19,10 +19,25 @@ const handler = createHandler({
     return data.user.id;
   },
 
-  async getWorkspaceIds(authHeader) {
-    const { data, error } = await asCaller(authHeader).from("workspace_members").select("workspace_id");
+  async getWorkspaces(authHeader) {
+    const { data, error } = await asCaller(authHeader)
+      .from("workspace_members")
+      .select("workspace_id, workspaces(owner_id, created_at)");
     if (error) throw error;
-    return (data ?? []).map((r: { workspace_id: string }) => r.workspace_id);
+    type Ws = { owner_id: string; created_at: string };
+    return (data ?? []).map((r: { workspace_id: string; workspaces: Ws | Ws[] | null }) => {
+      // Many-to-one embeds come back as an object; untyped clients type them as arrays.
+      const w = Array.isArray(r.workspaces) ? r.workspaces[0] : r.workspaces;
+      return { id: r.workspace_id, ownerId: w?.owner_id ?? "", createdAt: w?.created_at ?? "" };
+    });
+  },
+
+  async consumeAiAction(authHeader, workspaceId) {
+    const { data, error } = await asCaller(authHeader).rpc("consume_ai_action", { _workspace: workspaceId });
+    if (error) throw error;
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) throw new Error("consume_ai_action returned nothing");
+    return row;
   },
 
   async analyze(content) {

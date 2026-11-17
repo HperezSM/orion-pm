@@ -8,11 +8,17 @@ function assertEquals(actual: unknown, expected: unknown, msg = "") {
 const USER = "Bearer user-token";
 const ANON = "Bearer anon-key";
 
-function deps(over: Partial<Deps> = {}): Deps & { calls: number } {
+function deps(over: Partial<Deps> = {}): Deps & { calls: number; charged: string[] } {
   const d = {
     calls: 0,
+    charged: [] as string[],
     getUserId: (h: string) => Promise.resolve(h === USER ? "user-1" : null),
-    getWorkspaceIds: (h: string) => Promise.resolve(h === USER ? ["ws-1"] : []),
+    getWorkspaces: (h: string) =>
+      Promise.resolve(h === USER ? [{ id: "ws-1", ownerId: "user-1", createdAt: "2026-01-01T00:00:00Z" }] : []),
+    consumeAiAction: (_h: string, ws: string) => {
+      d.charged.push(ws);
+      return Promise.resolve({ allowed: true, reason: null, used: 1, quota: 500 });
+    },
     analyze: () => {
       d.calls++;
       return Promise.resolve({ status: 200, suggestions: [{ type: "task", title: "t" }] });
@@ -51,7 +57,7 @@ Deno.test("auth lookup throwing -> 401", async () => {
 });
 
 Deno.test("signed-in user with no workspace -> 403", async () => {
-  const d = deps({ getWorkspaceIds: () => Promise.resolve([]) });
+  const d = deps({ getWorkspaces: () => Promise.resolve([]) });
   const res = await createHandler(d)(post(note, USER));
   assertEquals(res.status, 403);
   assertEquals(d.calls, 0);
@@ -107,4 +113,69 @@ Deno.test("model 429 passes through; internal errors are not leaked", async () =
   const boom = await createHandler(deps({ analyze: () => Promise.reject(new Error("secret detail")) }))(post(note, USER));
   assertEquals(boom.status, 500);
   assertEquals((await boom.json()).error, "Analysis failed");
+});
+
+// --- DEX-10b: workspace choice and quota -----------------------------------
+
+const two = () =>
+  Promise.resolve([
+    { id: "ws-invited", ownerId: "someone-else", createdAt: "2025-01-01T00:00:00Z" },
+    { id: "ws-own", ownerId: "user-1", createdAt: "2026-06-01T00:00:00Z" },
+  ]);
+
+Deno.test("no workspace_id: charges the caller's own workspace, not the first one", async () => {
+  const d = deps({ getWorkspaces: two });
+  const res = await createHandler(d)(post(note, USER));
+  assertEquals(res.status, 200);
+  assertEquals(d.charged.join(","), "ws-own");
+});
+
+Deno.test("workspace_id given: charges that workspace", async () => {
+  const d = deps({ getWorkspaces: two });
+  await createHandler(d)(post({ ...note, workspace_id: "ws-invited" }, USER));
+  assertEquals(d.charged.join(","), "ws-invited");
+});
+
+Deno.test("plan without AI analysis -> 403 code plan, model not called", async () => {
+  const d = deps({ consumeAiAction: () => Promise.resolve({ allowed: false, reason: "plan", used: 0, quota: 0 }) });
+  const res = await createHandler(d)(post(note, USER));
+  assertEquals(res.status, 403);
+  assertEquals((await res.json()).code, "plan");
+  assertEquals(d.calls, 0);
+});
+
+Deno.test("quota used up -> 429 code quota, model not called", async () => {
+  const d = deps({ consumeAiAction: () => Promise.resolve({ allowed: false, reason: "quota", used: 500, quota: 500 }) });
+  const res = await createHandler(d)(post(note, USER));
+  assertEquals(res.status, 429);
+  const body = await res.json();
+  assertEquals(body.code, "quota");
+  assertEquals(body.usage.quota, 500);
+  assertEquals(d.calls, 0);
+});
+
+Deno.test("quota check failing -> 500, model not called (fails closed)", async () => {
+  const d = deps({ consumeAiAction: () => Promise.reject(new Error("db down")) });
+  const res = await createHandler(d)(post(note, USER));
+  assertEquals(res.status, 500);
+  assertEquals((await res.json()).error, "Analysis failed");
+  assertEquals(d.calls, 0);
+});
+
+Deno.test("short note is not charged", async () => {
+  const d = deps();
+  await createHandler(d)(post({ content: "hi" }, USER));
+  assertEquals(d.charged.length, 0);
+});
+
+Deno.test("success returns usage so the UI can update", async () => {
+  const res = await createHandler(deps())(post(note, USER));
+  const body = await res.json();
+  assertEquals(body.usage.used, 1);
+  assertEquals(body.usage.quota, 500);
+});
+
+Deno.test("model rate limit keeps code rate_limited (distinct from quota)", async () => {
+  const res = await createHandler(deps({ analyze: () => Promise.resolve({ status: 429 }) }))(post(note, USER));
+  assertEquals((await res.json()).code, "rate_limited");
 });

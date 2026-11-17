@@ -9,13 +9,37 @@ export const corsHeaders = {
 
 export const MAX_CONTENT_CHARS = 20_000;
 
+export interface WorkspaceRef {
+  id: string;
+  ownerId: string;
+  createdAt: string;
+}
+
+export interface QuotaResult {
+  allowed: boolean;
+  reason: "not_member" | "plan" | "quota" | null;
+  used: number | null;
+  quota: number | null;
+}
+
 export interface Deps {
   /** Resolve the bearer token to a user id, or null if it is not a valid session. */
   getUserId(authHeader: string): Promise<string | null>;
   /** Workspaces the user belongs to (read with the user's own token, so RLS applies). */
-  getWorkspaceIds(authHeader: string): Promise<string[]>;
+  getWorkspaces(authHeader: string): Promise<WorkspaceRef[]>;
+  /** consume_ai_action() RPC, called with the user's token. */
+  consumeAiAction(authHeader: string, workspaceId: string): Promise<QuotaResult>;
   /** Call the model. Returns the HTTP-ish status and suggestions. */
   analyze(content: string): Promise<{ status: number; suggestions?: unknown[] }>;
+}
+
+/** Same rule as src/lib/workspace.ts pickWorkspace: own workspace first, then oldest. */
+export function pickWorkspace(workspaces: WorkspaceRef[], userId: string): WorkspaceRef | null {
+  if (workspaces.length === 0) return null;
+  return [...workspaces].sort((a, b) => {
+    const own = Number(b.ownerId === userId) - Number(a.ownerId === userId);
+    return own !== 0 ? own : a.createdAt.localeCompare(b.createdAt);
+  })[0];
 }
 
 const json = (body: unknown, status = 200) =>
@@ -44,21 +68,34 @@ export function createHandler(deps: Deps) {
     if (content.length > MAX_CONTENT_CHARS) return json({ error: "Note too long" }, 413);
 
     // 3. Workspace membership. If the client names a workspace it must be one
-    //    of the caller's; otherwise any membership is enough.
-    const workspaces: string[] = await deps.getWorkspaceIds(authHeader).catch(() => []);
-    if (workspaces.length === 0) return json({ error: "Forbidden" }, 403);
-    if (body.workspace_id !== undefined && !workspaces.includes(String(body.workspace_id))) {
-      return json({ error: "Forbidden" }, 403);
+    //    of the caller's; otherwise use the caller's own workspace.
+    const workspaces: WorkspaceRef[] = await deps.getWorkspaces(authHeader).catch(() => []);
+    let workspace: WorkspaceRef | null;
+    if (body.workspace_id !== undefined) {
+      workspace = workspaces.find((w) => w.id === String(body.workspace_id)) ?? null;
+    } else {
+      workspace = pickWorkspace(workspaces, userId);
     }
+    if (!workspace) return json({ error: "Forbidden" }, 403);
 
     if (content.length < 10) return json({ suggestions: [] });
 
     try {
+      // 4. Plan and monthly quota, spent before the model is called.
+      const q = await deps.consumeAiAction(authHeader, workspace.id);
+      const usage = { used: q.used, quota: q.quota };
+      if (!q.allowed) {
+        if (q.reason === "quota") return json({ error: "AI action limit reached", code: "quota", usage }, 429);
+        if (q.reason === "plan") return json({ error: "Upgrade required", code: "plan", usage }, 403);
+        return json({ error: "Forbidden" }, 403);
+      }
+
+      // 5. Model
       const result = await deps.analyze(content);
-      if (result.status === 429) return json({ error: "Rate limited" }, 429);
-      if (result.status === 402) return json({ error: "Payment required" }, 402);
+      if (result.status === 429) return json({ error: "Rate limited", code: "rate_limited" }, 429);
+      if (result.status === 402) return json({ error: "Payment required", code: "credits" }, 402);
       if (result.status >= 400) throw new Error(`AI gateway error: ${result.status}`);
-      return json({ suggestions: result.suggestions ?? [] });
+      return json({ suggestions: result.suggestions ?? [], usage });
     } catch (e) {
       console.error("analyze-note error:", e);
       return json({ error: "Analysis failed" }, 500);

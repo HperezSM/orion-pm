@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Find all workspaces where trial has expired and tier is not 'starter'
+    // Find all workspaces where the trial has expired and the tier is not 'free'
     const { data: expiredWorkspaces, error: fetchError } = await supabase
       .from("workspaces")
       .select("id, owner_id, tier, trial_ends_at")
@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Downgrade to starter
+      // Downgrade to free
       const { error: updateError } = await supabase
         .from("workspaces")
         .update({ 
@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
         user_id: workspace.owner_id,
         type: "subscription",
         title: "Trial Expired",
-        message: "Your Pro trial has ended. You've been moved to the Starter plan. Upgrade anytime to restore full features.",
+        message: "Your trial has ended and your workspace is now on the Free plan. Upgrade anytime to restore full features.",
         entity_type: "workspace",
         entity_id: workspace.id,
       });
