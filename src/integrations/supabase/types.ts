@@ -1236,6 +1236,7 @@ export type Database = {
       workspaces: {
         Row: {
           ai_actions_used: number | null
+          ai_actions_period_start: string
           billing_cycle: string | null
           created_at: string
           id: string
@@ -1250,6 +1251,7 @@ export type Database = {
         }
         Insert: {
           ai_actions_used?: number | null
+          ai_actions_period_start?: string
           billing_cycle?: string | null
           created_at?: string
           id?: string
@@ -1264,6 +1266,7 @@ export type Database = {
         }
         Update: {
           ai_actions_used?: number | null
+          ai_actions_period_start?: string
           billing_cycle?: string | null
           created_at?: string
           id?: string
@@ -1283,6 +1286,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      change_workspace_tier: {
+        Args: { _tier: string; _workspace: string }
+        Returns: string
+      }
+      consume_ai_action: {
+        Args: { _workspace: string }
+        Returns: {
+          allowed: boolean
+          quota: number | null
+          reason: string | null
+          used: number | null
+        }[]
+      }
+      workspace_effective_tier: { Args: { _workspace: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
