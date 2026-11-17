@@ -12,9 +12,11 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentWorkspace, CURRENT_WORKSPACE_KEY } from "@/hooks/useCurrentWorkspace";
+import { TIER_ORDER, aiActionsThisMonth, aiQuota, effectiveTier, tierChangeErrorMessage } from "@/lib/workspace";
 import {
   User, CreditCard, Plug, Bell, Save, Loader2, Crown,
-  ArrowUpRight, ArrowDownRight, XCircle, Zap, HardDrive, Users,
+  ArrowUpRight, ArrowDownRight, XCircle, Zap, HardDrive, Users, Sparkles,
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
@@ -28,7 +30,6 @@ const TIER_LIMITS: Record<string, { users: number; projects: number; threads: nu
   enterprise: { users: 999, projects: 999, threads: 99999, price: 49 },
 };
 
-const TIER_ORDER = ["free", "starter", "pro", "enterprise"];
 
 export default function SettingsPage() {
   const { user, profile, roles, isOwner } = useAuth();
@@ -41,21 +42,14 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
 
-  // Fetch workspace
-  const { data: workspace, isLoading: wsLoading } = useQuery({
-    queryKey: ["workspace"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("workspaces")
-        .select("*")
-        .limit(1)
-        .maybeSingle();
-      return data;
-    },
-  });
+  const { data: workspace } = useCurrentWorkspace();
+  // Only the workspace's owner can change its plan (enforced by change_workspace_tier).
+  const canManagePlan = isOwner && !!workspace && workspace.owner_id === user?.id;
 
-  const tier = workspace?.tier ?? "free";
+  const tier = effectiveTier(workspace);
   const limits = TIER_LIMITS[tier] ?? TIER_LIMITS.free;
+  const aiUsed = aiActionsThisMonth(workspace);
+  const aiLimit = aiQuota(tier);
 
   const handleProfileSave = async () => {
     if (!user) return;
@@ -77,52 +71,25 @@ export default function SettingsPage() {
     }
   };
 
-  const handleTierChange = async (newTier: string) => {
-    if (!workspace) return;
-    try {
-      const { error } = await supabase
-        .from("workspaces")
-        .update({ tier: newTier })
-        .eq("id", workspace.id);
-      if (error) throw error;
-
-      await supabase.from("subscription_events").insert({
-        workspace_id: workspace.id,
-        event_type: TIER_ORDER.indexOf(newTier) > TIER_ORDER.indexOf(tier) ? "upgrade" : "downgrade",
-        old_tier: tier,
-        new_tier: newTier,
-        triggered_by: user?.id,
-      });
-
-      queryClient.invalidateQueries({ queryKey: ["workspace"] });
-      toast({ title: `Plan changed to ${newTier}` });
-    } catch (err: any) {
-      toast({ title: "Failed", description: err.message, variant: "destructive" });
+  const changeTier = async (newTier: string) => {
+    if (!workspace) return false;
+    const { error } = await supabase.rpc("change_workspace_tier", { _workspace: workspace.id, _tier: newTier });
+    if (error) {
+      toast({ title: "Plan not changed", description: tierChangeErrorMessage(error), variant: "destructive" });
+      return false;
     }
+    queryClient.invalidateQueries({ queryKey: CURRENT_WORKSPACE_KEY });
+    return true;
+  };
+
+  const handleTierChange = async (newTier: string) => {
+    if (await changeTier(newTier)) toast({ title: `Plan changed to ${newTier}` });
   };
 
   const handleCancel = async () => {
-    if (!workspace) return;
-    try {
-      const { error } = await supabase
-        .from("workspaces")
-        .update({ tier: "free" })
-        .eq("id", workspace.id);
-      if (error) throw error;
-
-      await supabase.from("subscription_events").insert({
-        workspace_id: workspace.id,
-        event_type: "cancellation",
-        old_tier: tier,
-        new_tier: "free",
-        triggered_by: user?.id,
-      });
-
-      queryClient.invalidateQueries({ queryKey: ["workspace"] });
+    if (await changeTier("free")) {
       setCancelOpen(false);
-      toast({ title: "Subscription cancelled", description: "Downgraded to Free plan." });
-    } catch (err: any) {
-      toast({ title: "Failed", description: err.message, variant: "destructive" });
+      toast({ title: "Subscription cancelled", description: "Moved to the Free plan." });
     }
   };
 
@@ -215,6 +182,13 @@ export default function SettingsPage() {
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs text-text-secondary flex items-center gap-1.5"><Sparkles className="h-3 w-3" /> AI Actions this month</span>
+                      <span className="text-xs font-mono text-text-muted">{aiUsed}/{aiLimit}</span>
+                    </div>
+                    <Progress value={aiLimit === 0 ? 0 : usagePct(aiUsed, aiLimit)} className="h-2" />
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
                       <span className="text-xs text-text-secondary flex items-center gap-1.5"><Zap className="h-3 w-3" /> Active Projects</span>
                       <span className="text-xs font-mono text-text-muted">{limits.projects === 999 ? "Unlimited" : `${limits.projects} max`}</span>
                     </div>
@@ -231,7 +205,7 @@ export default function SettingsPage() {
               </Card>
 
               {/* Tier selection */}
-              {isOwner && (
+              {canManagePlan && (
                 <Card className="p-6">
                   <h3 className="text-sm font-heading font-semibold text-foreground mb-4">Change Plan</h3>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -280,7 +254,7 @@ export default function SettingsPage() {
               )}
 
               {/* Cancel */}
-              {isOwner && tier !== "free" && (
+              {canManagePlan && tier !== "free" && (
                 <Card className="p-6 border-destructive/30">
                   <div className="flex items-center justify-between">
                     <div>
@@ -297,7 +271,7 @@ export default function SettingsPage() {
                         <DialogHeader>
                           <DialogTitle>Cancel your subscription?</DialogTitle>
                           <DialogDescription>
-                            Your workspace will be downgraded to the Starter plan immediately. You'll lose access to premium features including extra seats, AI actions, and storage.
+                            Your workspace will move to the Free plan immediately. You'll lose access to premium features including extra seats, AI actions, and storage.
                           </DialogDescription>
                         </DialogHeader>
                         <DialogFooter>
