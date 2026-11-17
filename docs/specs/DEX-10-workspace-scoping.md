@@ -2,15 +2,11 @@
 
 Status: draft, for review. Nothing here is applied. Gio applies the migration through Lovable.
 
-## Problem
+## Goal
 
-1. `analyze-note` runs with `verify_jwt = false` and never checks the caller. Anyone with the project URL can call it and spend the Lovable AI credits.
-2. The app has a `workspaces` table but no membership and no `workspace_id` on the data. Most RLS policies are `USING (true)` / `WITH CHECK (true)`, so every signed-in user of any workspace can read and write every other tenant's tasks, projects, risks, sprints, and more.
-3. Related leaks the same change closes:
-   - `workspaces` SELECT is `USING (true)`: every user can read every workspace's Stripe customer and subscription ids. `useTierEnforcement` and `NotesEditor` call `.from("workspaces").limit(1)`, so they can pick up a stranger's tier.
-   - `profiles` SELECT is `USING (true)`: every user's email is visible to every other user.
-   - `notifications` and `subscription_events` INSERT are `WITH CHECK (true)`: anyone can notify anyone, or write fake billing events for any workspace.
-   - The global `admin` / `super_admin` app roles see notes, inboxes and follow-ups across all tenants.
+1. `analyze-note` serves signed-in members of a workspace only, with a size cap and generic errors.
+2. Every row of app data belongs to one workspace, and RLS lets people see and change only the workspaces they belong to.
+3. The account tables follow the same rule: `workspaces`, `profiles`, `notifications` and `subscription_events` are scoped by membership, and workspace `owner`/`admin` takes over from the global admin roles for tenant data.
 
 ## Changes
 
@@ -62,9 +58,7 @@ If Lovable Cloud's newer signing keys make the gateway reject valid user tokens 
 4. Smoke test: sign in, open Notes, run "Analyze". Then load Projects, Inbox and Sprints, and create a task and a note.
 5. Rollback: the migration has no automatic down. Restore from the Lovable/Supabase backup, or reapply the old policies by hand. The old migration file has them.
 
-## Follow-ups (not in this PR)
+## Follow-ups
 
-- The frontend should pass `workspace_id` once users can belong to more than one workspace. Today `.limit(1)` on `workspaces` picks an arbitrary one for invited members.
-- Workspace owners can still set their own `tier` and `ai_actions_used` from the browser (Settings page, NotesEditor). Billing fields should only change server side, through Stripe webhooks and an AI-usage counter inside analyze-note.
-- `user_roles`: the global `admin`/`super_admin` roles no longer reach tenant data. Decide whether to keep them.
-- `check-trial-expiry` uses the service role key and has no `verify_jwt` entry. Confirm it is only called by pg_cron.
+- Done in DEX-10b (same branch, `docs/specs/DEX-10b-server-managed-billing.md`): one workspace picker shared by the frontend and analyze-note, plan and usage fields managed by the server, an explicit `verify_jwt` entry for `check-trial-expiry`.
+- Still open: a workspace switcher for people in more than one workspace; decide whether to keep the global `admin`/`super_admin` roles; confirm `check-trial-expiry` is only called by the scheduler.

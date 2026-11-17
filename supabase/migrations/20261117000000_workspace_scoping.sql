@@ -436,8 +436,7 @@ CREATE POLICY "Owner only" ON public.calendar_events FOR ALL TO authenticated
   USING (public.is_workspace_member(workspace_id, auth.uid()) AND user_id = auth.uid())
   WITH CHECK (public.is_workspace_member(workspace_id, auth.uid()) AND user_id = auth.uid());
 
--- workspaces: members see their own workspaces only (was USING (true), which
--- exposed every tenant's Stripe ids and let .limit(1) pick a stranger's tier).
+-- workspaces: members see their own workspaces only.
 CREATE POLICY "Members can view workspace" ON public.workspaces FOR SELECT TO authenticated
   USING (public.is_workspace_member(id, auth.uid()) OR public.is_owner(auth.uid()));
 CREATE POLICY "Owner can manage workspace" ON public.workspaces FOR ALL TO authenticated
