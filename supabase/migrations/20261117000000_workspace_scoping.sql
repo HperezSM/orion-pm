@@ -68,10 +68,13 @@ $$;
 -- workspace the user owns, else the oldest one they belong to.
 CREATE OR REPLACE FUNCTION public.default_workspace_id(_user_id uuid)
 RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  -- Same rule as pickWorkspace() in src/lib/workspace.ts and analyze-note:
+  -- the workspace you own first, then the oldest workspace, then by id.
   SELECT m.workspace_id
   FROM public.workspace_members m
+  JOIN public.workspaces w ON w.id = m.workspace_id
   WHERE m.user_id = _user_id
-  ORDER BY (m.role = 'owner') DESC, m.created_at, m.workspace_id
+  ORDER BY (w.owner_id = _user_id) DESC, w.created_at, w.id
   LIMIT 1
 $$;
 -- Internal: used by the migration and the enforce_workspace_id trigger only.

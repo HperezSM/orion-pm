@@ -13,12 +13,14 @@ export interface WorkspaceLike {
   created_at: string;
 }
 
-/** Same rule as analyze-note: the workspace you own first, then the oldest one you belong to. */
+/** Same rule as analyze-note and public.default_workspace_id(): the workspace you own, then the oldest, then by id. */
 export function pickWorkspace<T extends WorkspaceLike>(rows: T[] | null | undefined, userId: string | null | undefined): T | null {
   if (!rows || rows.length === 0) return null;
   return [...rows].sort((a, b) => {
     const own = Number(b.owner_id === userId) - Number(a.owner_id === userId);
-    return own !== 0 ? own : a.created_at.localeCompare(b.created_at);
+    if (own !== 0) return own;
+    if (a.created_at !== b.created_at) return a.created_at < b.created_at ? -1 : 1;
+    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
   })[0];
 }
 

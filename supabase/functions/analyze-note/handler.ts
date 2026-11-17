@@ -33,12 +33,14 @@ export interface Deps {
   analyze(content: string): Promise<{ status: number; suggestions?: unknown[] }>;
 }
 
-/** Same rule as src/lib/workspace.ts pickWorkspace: own workspace first, then oldest. */
+/** Same rule as src/lib/workspace.ts pickWorkspace and public.default_workspace_id(). */
 export function pickWorkspace(workspaces: WorkspaceRef[], userId: string): WorkspaceRef | null {
   if (workspaces.length === 0) return null;
   return [...workspaces].sort((a, b) => {
     const own = Number(b.ownerId === userId) - Number(a.ownerId === userId);
-    return own !== 0 ? own : a.createdAt.localeCompare(b.createdAt);
+    if (own !== 0) return own;
+    if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? -1 : 1;
+    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
   })[0];
 }
 

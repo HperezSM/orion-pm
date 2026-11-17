@@ -44,3 +44,6 @@ INSERT INTO public.email_threads (id, subject, user_id, project_id) VALUES
 
 INSERT INTO public.reports (id, type) VALUES
   ('e7000000-0000-0000-0000-000000000000', 'weekly');
+
+-- A lifetime AI counter from the old browser-side increment.
+UPDATE public.workspaces SET ai_actions_used = 9999 WHERE owner_id = 'a0000000-0000-0000-0000-000000000000';

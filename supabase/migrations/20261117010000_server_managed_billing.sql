@@ -10,6 +10,36 @@
 ALTER TABLE public.workspaces
   ADD COLUMN IF NOT EXISTS ai_actions_period_start timestamptz NOT NULL DEFAULT date_trunc('month', now());
 
+-- ai_actions_used was a lifetime count kept by the browser. Start every
+-- workspace on a clean monthly window so nobody is locked out by old totals.
+UPDATE public.workspaces SET ai_actions_used = 0, ai_actions_period_start = date_trunc('month', now());
+
+-- seats_used follows membership.
+UPDATE public.workspaces w
+SET seats_used = GREATEST(1, (SELECT count(*) FROM public.workspace_members m WHERE m.workspace_id = w.id));
+
+CREATE OR REPLACE FUNCTION public.sync_workspace_seats()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
+DECLARE
+  _ws uuid := COALESCE(NEW.workspace_id, OLD.workspace_id);
+BEGIN
+  UPDATE public.workspaces
+  SET seats_used = GREATEST(1, (SELECT count(*) FROM public.workspace_members m WHERE m.workspace_id = _ws))
+  WHERE id = _ws;
+  IF TG_OP = 'UPDATE' AND NEW.workspace_id IS DISTINCT FROM OLD.workspace_id THEN
+    UPDATE public.workspaces
+    SET seats_used = GREATEST(1, (SELECT count(*) FROM public.workspace_members m WHERE m.workspace_id = OLD.workspace_id))
+    WHERE id = OLD.workspace_id;
+  END IF;
+  RETURN NULL;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.sync_workspace_seats() FROM PUBLIC, anon, authenticated;
+
+DROP TRIGGER IF EXISTS sync_workspace_seats ON public.workspace_members;
+CREATE TRIGGER sync_workspace_seats AFTER INSERT OR UPDATE OR DELETE ON public.workspace_members
+  FOR EACH ROW EXECUTE FUNCTION public.sync_workspace_seats();
+
 -- -----------------------------------------------------------------------------
 -- 2. Plan rules (one place, mirrored in src/lib/workspace.ts)
 -- -----------------------------------------------------------------------------

@@ -10,7 +10,9 @@ The plan (`tier`), trial dates, usage counters and Stripe ids on `workspaces` ar
 
 ### Database: `supabase/migrations/20261117010000_server_managed_billing.sql`
 
-1. New column `workspaces.ai_actions_period_start` (start of the current monthly window).
+1. New column `workspaces.ai_actions_period_start` (start of the current monthly window). Every workspace starts at 0 used: the old counter was a lifetime total, so a busy workspace would otherwise be locked out until next month.
+   - `seats_used` is recalculated from `workspace_members` and kept in sync by a trigger.
+   - `default_workspace_id()` (DEX-10) now uses the same rule as the app: the workspace you own, then the oldest, then by id.
 2. `workspace_effective_tier(workspace)`: the tier that is in force right now. A trial that has ended without a Stripe subscription counts as `free`, even before the nightly `check-trial-expiry` job has run.
 3. Trigger `protect_workspace_billing` on `workspaces`:
    - For browser roles (`anon`, `authenticated`), an UPDATE may not change `tier`, `trial_ends_at`, `billing_cycle`, `seats_used`, `ai_actions_used`, `ai_actions_period_start`, `storage_used_gb`, `stripe_customer_id` or `stripe_subscription_id`. Owners can still rename their workspace.
@@ -36,7 +38,7 @@ The plan (`tier`), trial dates, usage counters and Stripe ids on `workspaces` ar
 
 - `src/lib/workspace.ts`: `pickWorkspace()` chooses the workspace the same way as analyze-note. `effectiveTier()` mirrors the SQL function. Both are unit tested.
 - `useCurrentWorkspace()` replaces the three `.from("workspaces").limit(1)` queries (Settings, `useTierEnforcement`, NotesEditor). With the DEX-10 policies a platform owner can read every workspace, so `.limit(1)` could show them someone else's plan.
-- Settings: plan buttons call `change_workspace_tier` and show a plain message when an upgrade needs billing. The cancel dialog now says Free plan (the code always moved to Free).
+- Settings: Change Plan and Cancel show for the workspace's owner (before, only for the platform-owner account). The buttons call `change_workspace_tier` and show a plain message when an upgrade needs billing. The cancel dialog now says Free plan (the code always moved to Free).
 - NotesEditor: no more client-side counter. Sends `workspace_id`, reads the function's error code (`plan`, `quota`, rate limit) and refreshes usage after a run.
 
 ### check-trial-expiry
@@ -58,3 +60,6 @@ Same as DEX-10, one step later: apply `20261117000000` then `20261117010000`, de
 
 - Paid upgrades need Stripe Checkout plus a webhook that sets `tier` and `stripe_subscription_id` with the service role. Stripe has no monthly fee; it charges per successful card payment. Gio decides when.
 - Enterprise "overage at $0.02/action" (Pricing FAQ) is not enforced. Today Enterprise stops at 2,000 like the others.
+- Starter shows 100 AI actions (Pricing page) but note analysis is a Pro feature, so Starter cannot spend them yet. Either open analysis to Starter or show 0.
+- A Pro trial can switch to Enterprise (2,000 actions) during the 14 days. Cap trials at Pro if that is too generous.
+- `check-trial-expiry` accepts any valid JWT. The job is idempotent, but a shared secret header would stop anyone from triggering it. That needs the scheduler's caller updated at the same time.

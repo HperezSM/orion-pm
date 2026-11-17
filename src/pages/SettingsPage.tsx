@@ -32,7 +32,7 @@ const TIER_LIMITS: Record<string, { users: number; projects: number; threads: nu
 
 
 export default function SettingsPage() {
-  const { user, profile, roles, isOwner } = useAuth();
+  const { user, profile, roles } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [profileForm, setProfileForm] = useState({
@@ -44,7 +44,7 @@ export default function SettingsPage() {
 
   const { data: workspace } = useCurrentWorkspace();
   // Only the workspace's owner can change its plan (enforced by change_workspace_tier).
-  const canManagePlan = isOwner && !!workspace && workspace.owner_id === user?.id;
+  const canManagePlan = !!workspace && workspace.owner_id === user?.id;
 
   const tier = effectiveTier(workspace);
   const limits = TIER_LIMITS[tier] ?? TIER_LIMITS.free;

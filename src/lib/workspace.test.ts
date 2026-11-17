@@ -26,6 +26,11 @@ describe("pickWorkspace", () => {
     expect(pickWorkspace(rows, "u1")?.id).toBe("a");
   });
 
+  it("breaks a created_at tie by id, like the database", () => {
+    const rows = [ws("b", "u2", "2026-01-01T00:00:00Z"), ws("a", "u3", "2026-01-01T00:00:00Z")];
+    expect(pickWorkspace(rows, "u1")?.id).toBe("a");
+  });
+
   it("does not depend on input order", () => {
     const rows = [ws("x", "u2", "2026-01-01T00:00:00Z"), ws("mine", "u1", "2026-03-01T00:00:00Z")];
     expect(pickWorkspace([...rows].reverse(), "u1")?.id).toBe("mine");

@@ -119,12 +119,9 @@ export function NotesEditor({ noteId, onSaved }: NotesEditorProps) {
       if (error) throw error;
       setSuggestions(data?.suggestions ?? []);
       toast({ title: "Analysis complete", description: `Found ${data?.suggestions?.length ?? 0} actionable items.` });
-      // The server counted the action; refresh the usage it reports.
-      queryClient.invalidateQueries({ queryKey: CURRENT_WORKSPACE_KEY });
     } catch (e: unknown) {
       const { status, code } = await readFunctionError(e);
       if (code === "quota") {
-        queryClient.invalidateQueries({ queryKey: CURRENT_WORKSPACE_KEY });
         setUpgradeReason("limit");
         setShowUpgrade(true);
       } else if (code === "plan") {
@@ -138,6 +135,8 @@ export function NotesEditor({ noteId, onSaved }: NotesEditorProps) {
         toast({ title: "Analysis failed", description: "Please try again.", variant: "destructive" });
       }
     } finally {
+      // The server may have counted an action even if the call failed; refresh usage.
+      queryClient.invalidateQueries({ queryKey: CURRENT_WORKSPACE_KEY });
       setAnalyzing(false);
     }
   };

@@ -50,6 +50,23 @@ SELECT tests.ok(
   'active trial: effective tier is the trial tier');
 
 SELECT tests.ok(
+  (SELECT ai_actions_used FROM public.workspaces WHERE owner_id = 'a0000000-0000-0000-0000-000000000000') = 0,
+  'old lifetime AI counters are reset by the migration');
+
+SELECT tests.ok(
+  (SELECT seats_used FROM public.workspaces WHERE id = (SELECT id FROM tests.bws WHERE email = 'erin@example.test')) = 2,
+  'adding a member updates seats_used');
+
+DELETE FROM public.workspace_members
+  WHERE user_id = 'f9000000-0000-0000-0000-000000000000'
+    AND workspace_id = (SELECT id FROM tests.bws WHERE email = 'erin@example.test');
+SELECT tests.ok(
+  (SELECT seats_used FROM public.workspaces WHERE id = (SELECT id FROM tests.bws WHERE email = 'erin@example.test')) = 1,
+  'removing a member updates seats_used');
+INSERT INTO public.workspace_members (workspace_id, user_id, role)
+SELECT id, 'f9000000-0000-0000-0000-000000000000', 'member' FROM tests.bws WHERE email = 'erin@example.test';
+
+SELECT tests.ok(
   NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'subscription_events'
               AND cmd IN ('INSERT', 'ALL')),
   'no browser policy can insert subscription events');
