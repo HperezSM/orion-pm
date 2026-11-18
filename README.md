@@ -18,7 +18,7 @@ Senior PMs lose 60-90 minutes daily to information gathering before they can mak
 
 | Feature | Description | Status |
 |---|---|---|
-| **Daily AI Brief** | Auto-generated morning summary of sprint health, blockers, and priorities | 🟡 In Dev |
+| **Daily AI Brief** | Morning summary of overdue work, sprint health, blockers, follow-ups and priorities on the dashboard, with an optional AI-written summary ([spec](docs/specs/daily-brief.md)) | ✅ Built |
 | **Sprint Tracker** | Real-time velocity, burndown, and risk flags across multiple teams | 🟡 In Dev |
 | **Automated Reporting** | Stakeholder-ready reports generated from live project data | 🔲 Planned |
 | **Retrospective Assistant** | AI-facilitated retro prompts and action item capture | 🔲 Planned |

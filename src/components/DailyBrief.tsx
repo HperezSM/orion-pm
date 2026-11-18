@@ -34,7 +34,8 @@ export function DailyBrief() {
   const { data: workspace } = useCurrentWorkspace();
   const queryClient = useQueryClient();
   const today = localToday();
-  const [ai, setAi] = useState<AiSummary | null>(null);
+  // Keyed by workspace and day so a workspace switch or midnight never shows a stale summary.
+  const [ai, setAi] = useState<{ key: string; summary: AiSummary } | null>(null);
   const [aiNote, setAiNote] = useState<string | null>(null);
   const [writing, setWriting] = useState(false);
 
@@ -51,7 +52,8 @@ export function DailyBrief() {
     },
   });
 
-  const summary = ai ?? (workspace ? readCachedSummary(storage, workspace.id, today) : null);
+  const key = workspace ? `${workspace.id}:${today}` : "";
+  const summary = (ai?.key === key ? ai.summary : null) ?? (workspace ? readCachedSummary(storage, workspace.id, today) : null);
 
   const writeSummary = async () => {
     if (!workspace) return;
@@ -65,7 +67,7 @@ export function DailyBrief() {
       const res = data as BriefResponse;
       queryClient.setQueryData(["daily-brief", workspace.id, today], res);
       if (res.ai.status === "ok" && res.ai.summary) {
-        setAi(res.ai.summary);
+        setAi({ key: `${workspace.id}:${today}`, summary: res.ai.summary });
         writeCachedSummary(storage, workspace.id, today, res.ai.summary);
       } else {
         setAiNote(aiStatusMessage(res.ai.status));

@@ -66,7 +66,8 @@ const handler = createHandler({
       .from("tasks")
       .select("id, title, status, priority, due_date, project_id, sprint_id, story_points")
       .eq("workspace_id", ws)
-      .neq("status", "done")
+      // status is nullable; neq alone would drop NULL rows.
+      .or("status.is.null,status.neq.done")
       .not("due_date", "is", null)
       .order("due_date", { ascending: true })
       .limit(ROW_LIMIT);
