@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { TopBar } from "@/components/TopBar";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
+import { DailyBrief } from "@/components/DailyBrief";
 import { supabase } from "@/integrations/supabase/client";
 import {
   FolderKanban,
@@ -120,6 +121,8 @@ export default function DashboardPage() {
     <div className="animate-fade-in">
       <TopBar title="Dashboard" subtitle="Welcome back — here's your command center." />
       <div className="p-6 space-y-6">
+        <DailyBrief />
+
         {/* Stats row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard label="Active Projects" value={projectCount ?? 0} icon={<FolderKanban className="h-4 w-4" />} accent="primary" />

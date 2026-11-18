@@ -1,4 +1,10 @@
 project_id = "knxotuvacoqcoyzdkkyx"
 
 [functions.analyze-note]
-verify_jwt = false
+verify_jwt = true
+
+[functions.check-trial-expiry]
+verify_jwt = true
+
+[functions.daily-brief]
+verify_jwt = true

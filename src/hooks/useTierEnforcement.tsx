@@ -1,7 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useCurrentWorkspace } from "@/hooks/useCurrentWorkspace";
+import { aiActionsThisMonth, aiQuota, effectiveTier } from "@/lib/workspace";
 
-export type TierName = "free" | "starter" | "pro" | "enterprise";
+import type { TierName } from "@/lib/workspace";
+export type { TierName };
 
 export interface TierLimits {
   users: number;
@@ -121,31 +122,23 @@ export interface WorkspaceUsage {
   tier: TierName;
   seatsUsed: number;
   aiActionsUsed: number;
+  aiActionsQuota: number;
   storageUsedGb: number;
   trialEndsAt: string | null;
 }
 
 export function useTierEnforcement() {
-  const { data: workspace, isLoading } = useQuery({
-    queryKey: ["workspace-tier"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("workspaces")
-        .select("tier, seats_used, ai_actions_used, storage_used_gb, trial_ends_at")
-        .limit(1)
-        .maybeSingle();
-      return data;
-    },
-    staleTime: 60000,
-  });
+  const { data: workspace, isLoading } = useCurrentWorkspace();
 
-  const tier: TierName = (workspace?.tier as TierName) ?? "free";
+  // The tier in force now (an ended trial counts as free), as the server sees it.
+  const tier: TierName = effectiveTier(workspace);
   const limits = TIER_CONFIG[tier];
 
   const usage: WorkspaceUsage = {
     tier,
     seatsUsed: workspace?.seats_used ?? 0,
-    aiActionsUsed: workspace?.ai_actions_used ?? 0,
+    aiActionsUsed: aiActionsThisMonth(workspace),
+    aiActionsQuota: aiQuota(tier),
     storageUsedGb: Number(workspace?.storage_used_gb ?? 0),
     trialEndsAt: workspace?.trial_ends_at ?? null,
   };

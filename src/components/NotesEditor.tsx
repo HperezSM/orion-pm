@@ -6,6 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useTierEnforcement } from "@/hooks/useTierEnforcement";
+import { useCurrentWorkspace, CURRENT_WORKSPACE_KEY } from "@/hooks/useCurrentWorkspace";
+import { readFunctionError } from "@/lib/workspace";
+import { useQueryClient } from "@tanstack/react-query";
 import { UpgradeModal } from "@/components/UpgradeModal";
 import {
   Bold, Italic, Heading1, Heading2, List, ListOrdered,
@@ -22,6 +25,8 @@ export function NotesEditor({ noteId, onSaved }: NotesEditorProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const { canUseFeature, getRequiredTierForFeature, tier } = useTierEnforcement();
+  const { data: workspace } = useCurrentWorkspace();
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [suggestions, setSuggestions] = useState<any[] | null>(null);
@@ -108,31 +113,30 @@ export function NotesEditor({ noteId, onSaved }: NotesEditorProps) {
 
     setAnalyzing(true);
     try {
-      const { data, error } = await supabase.functions.invoke("analyze-note", { body: { content: text } });
+      const { data, error } = await supabase.functions.invoke("analyze-note", {
+        body: { content: text, ...(workspace ? { workspace_id: workspace.id } : {}) },
+      });
       if (error) throw error;
       setSuggestions(data?.suggestions ?? []);
       toast({ title: "Analysis complete", description: `Found ${data?.suggestions?.length ?? 0} actionable items.` });
-
-      // Increment AI actions used (fire and forget)
-      supabase
-        .from("workspaces")
-        .select("id, ai_actions_used")
-        .limit(1)
-        .maybeSingle()
-        .then(({ data: ws }) => {
-          if (ws) {
-            supabase.from("workspaces").update({ ai_actions_used: (ws.ai_actions_used ?? 0) + 1 }).eq("id", ws.id).then(() => {});
-          }
-        });
-    } catch (e: any) {
-      if (e?.message?.includes("429") || e?.status === 429) {
+    } catch (e: unknown) {
+      const { status, code } = await readFunctionError(e);
+      if (code === "quota") {
+        setUpgradeReason("limit");
+        setShowUpgrade(true);
+      } else if (code === "plan") {
+        setUpgradeReason("feature");
+        setShowUpgrade(true);
+      } else if (code === "rate_limited" || status === 429) {
         toast({ title: "Rate limited", description: "Please try again in a moment.", variant: "destructive" });
-      } else if (e?.message?.includes("402") || e?.status === 402) {
-        toast({ title: "Credits required", description: "Please add funds to continue using AI.", variant: "destructive" });
+      } else if (code === "credits" || status === 402) {
+        toast({ title: "AI temporarily unavailable", description: "Please try again later.", variant: "destructive" });
       } else {
-        toast({ title: "Analysis failed", description: e?.message || "Unknown error", variant: "destructive" });
+        toast({ title: "Analysis failed", description: "Please try again.", variant: "destructive" });
       }
     } finally {
+      // The server may have counted an action even if the call failed; refresh usage.
+      queryClient.invalidateQueries({ queryKey: CURRENT_WORKSPACE_KEY });
       setAnalyzing(false);
     }
   };
