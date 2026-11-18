@@ -12,7 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:db": "node tests/db/run.mjs",
-    "test:functions": "deno test supabase/functions/analyze-note/handler.test.ts"
+    "test:functions": "deno test supabase/functions/analyze-note/handler.test.ts supabase/functions/daily-brief/handler.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
