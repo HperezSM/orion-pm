@@ -8,6 +8,7 @@ import {
   type AiSummary,
   type BriefResponse,
   aiStatusMessage,
+  browserStorage,
   localToday,
   readCachedSummary,
   writeCachedSummary,
@@ -23,7 +24,7 @@ const KIND_ICON = {
   project: AlertTriangle,
 } as const;
 
-const storage = typeof window !== "undefined" ? window.localStorage : undefined;
+const storage = browserStorage();
 
 /**
  * The morning brief on the dashboard. The facts and focus list load for free

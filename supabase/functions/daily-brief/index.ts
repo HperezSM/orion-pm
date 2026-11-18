@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { createHandler } from "./handler.ts";
-import { BRIEF_SYSTEM_PROMPT, briefPromptPayload, parseAiSummary, WRITE_BRIEF_TOOL } from "../_shared/brief.ts";
+import { BRIEF_SYSTEM_PROMPT, briefPromptPayload, parseAiSummary, WRITE_BRIEF_TOOL, type BriefData } from "../_shared/brief.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
@@ -87,8 +87,8 @@ const handler = createHandler({
       risks: rows(risks),
       followUps: rows(followUps),
       milestones: rows(milestones),
-      // deno-lint-ignore no-explicit-any
-    } as any;
+      // Rows come from an untyped client; the shapes match the selects above.
+    } as unknown as BriefData;
   },
 
   async consumeAiAction(authHeader, workspaceId) {

@@ -12,6 +12,20 @@ export function localToday(now: Date = new Date()): string {
 
 const KEY_PREFIX = "orion:brief-ai:";
 
+/**
+ * window.localStorage, or undefined when there is none. Reading the property
+ * itself throws a SecurityError in Safari and Chrome when site data is
+ * blocked, so it must never be read unguarded (a throw at import time would
+ * blank the whole dashboard).
+ */
+export function browserStorage(win: { localStorage: Storage } | undefined = typeof window !== "undefined" ? window : undefined): Storage | undefined {
+  try {
+    return win?.localStorage ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function briefCacheKey(workspaceId: string, today: string): string {
   return `${KEY_PREFIX}${workspaceId}:${today}`;
 }
